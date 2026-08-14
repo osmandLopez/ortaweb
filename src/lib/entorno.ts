@@ -4,8 +4,18 @@
  * Astro las expone en import.meta.env; los scripts de mantenimiento bajo tsx y
  * el runtime de Vercel solo tienen process.env. Se consultan las dos.
  */
+
+/* Vite no deja `import.meta.env` como un objeto vivo: lo sustituye en el build
+   por un literal con los valores que había al compilar. Por eso se guarda aquí
+   como lo que es, una foto del build, y se consulta en segundo lugar. */
+const delBuild = (import.meta as { env?: Record<string, string | undefined> }).env ?? {};
+
 export function env(clave: string): string | undefined {
-  return (import.meta as { env?: Record<string, string> }).env?.[clave] ?? process.env[clave];
+  /* process.env manda: es lo único que refleja las variables reales del
+     despliegue. Si se leyera antes la foto del build, cambiar una variable en el
+     panel de Vercel no tendría efecto, y peor: un valor local horneado al
+     compilar (DATABASE_URL=file:…) ganaría en producción. */
+  return process.env[clave] ?? delBuild[clave];
 }
 
 /** true cuando corre en Vercel, en cualquier entorno de despliegue. */

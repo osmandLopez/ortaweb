@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
 import type Stripe from 'stripe';
-import { stripe } from '@/lib/stripe';
+import { stripeCliente } from '@/lib/stripe';
 import { db } from '@/lib/db';
+import { env } from '@/lib/entorno';
 
 export const prerender = false;
 
@@ -18,13 +19,16 @@ export const POST: APIRoute = async ({ request }) => {
   const firma = request.headers.get('stripe-signature');
   if (!firma) return new Response('Falta la firma de Stripe.', { status: 400 });
 
+  const secreto = env('STRIPE_WEBHOOK_SECRET');
+  if (!secreto) {
+    /* Sin el secreto no se puede validar la firma, y dar por buena la petición
+       dejaría que cualquiera marcara pedidos como pagados. */
+    return new Response('Falta STRIPE_WEBHOOK_SECRET en el servidor.', { status: 500 });
+  }
+
   let evento: Stripe.Event;
   try {
-    evento = stripe.webhooks.constructEvent(
-      await request.text(),
-      firma,
-      import.meta.env.STRIPE_WEBHOOK_SECRET,
-    );
+    evento = stripeCliente().webhooks.constructEvent(await request.text(), firma, secreto);
   } catch (e) {
     return new Response(`Firma inválida: ${(e as Error).message}`, { status: 400 });
   }

@@ -1,10 +1,34 @@
 import Stripe from 'stripe';
+import { env } from './entorno';
 import type { ItemCarrito, MetodoEntrega, OpcionEnvio } from './types';
 
-export const stripe = new Stripe(import.meta.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-12-18.acacia',
-  appInfo: { name: 'Orta Novedades', version: '0.1.0' },
-});
+/*
+ * El cliente se arma en la primera llamada, no al importar el módulo.
+ *
+ * Construirlo arriba hacía que una clave ausente reventara al cargar el módulo,
+ * y en una función serverless eso es un 500 con el cuerpo vacío en la ruta
+ * entera: sin traza, sin pista de qué falta. Así el fallo llega solo a quien
+ * usa Stripe y dice qué variable falta.
+ */
+let cliente: Stripe | null = null;
+
+export function stripeCliente(): Stripe {
+  if (cliente) return cliente;
+
+  const clave = env('STRIPE_SECRET_KEY');
+  if (!clave) {
+    throw new Error(
+      'Falta STRIPE_SECRET_KEY. Defínela en .env para desarrollo, o en las ' +
+        'variables de entorno del proyecto en Vercel para el sitio publicado.',
+    );
+  }
+
+  cliente = new Stripe(clave, {
+    apiVersion: '2024-12-18.acacia',
+    appInfo: { name: 'Orta Novedades', version: '0.1.0' },
+  });
+  return cliente;
+}
 
 export const MONEDA = 'mxn';
 
@@ -63,7 +87,7 @@ export function crearSesionCheckout(datos: DatosSesion) {
   const items = [...lineItems(datos.items)];
   if (datos.envio && datos.envio.costo > 0) items.push(lineItemEnvio(datos.envio));
 
-  return stripe.checkout.sessions.create({
+  return stripeCliente().checkout.sessions.create({
     mode: 'payment',
     // Tarjeta cubre crédito y débito. Apple Pay y Google Pay se activan solos en
     // Checkout cuando el dominio está verificado en el panel de Stripe.

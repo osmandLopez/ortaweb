@@ -1,5 +1,4 @@
-import { createClient } from '@libsql/client';
-import { drizzle } from 'drizzle-orm/libsql';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { and, asc, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
 import * as t from './schema';
 import { ErrorDeDatos, type FiltroProductos, type Repositorio } from './repositorio';
@@ -16,12 +15,31 @@ const urlBase = env('DATABASE_URL') ?? 'file:./orta.db';
 // apuntando al archivo, se avisa aquí en vez de fallar más tarde sin contexto.
 verificarBaseDeDatos(urlBase);
 
-const cliente = createClient({
-  url: urlBase,
-  authToken: env('DATABASE_AUTH_TOKEN'),
-});
+/*
+ * Qué controlador se carga depende de a dónde apunta la base.
+ *
+ * `drizzle-orm/libsql` a secas importa el cliente de Node, y ese arrastra un
+ * binario nativo (@libsql/<plataforma>/index.node) que el empaquetador de Vercel
+ * no copia dentro de la función: deja el package.json y se deja el .node fuera.
+ * El require falla al cargar el módulo, y como el middleware toca esta capa en
+ * cada petición, el sitio entero responde 500 con el cuerpo vacío aunque el
+ * build haya salido bien.
+ *
+ * La entrada /web habla con Turso por HTTP y no depende de nada nativo, así que
+ * es la que sirve en producción. El binario solo hace falta para abrir el
+ * archivo SQLite de desarrollo, y por eso las dos importaciones son dinámicas:
+ * una estática volvería a meter el binario en el paquete.
+ */
+const esRemota = !urlBase.startsWith('file:');
 
-export const orm = drizzle(cliente, { schema: t });
+const { drizzle } = esRemota
+  ? await import('drizzle-orm/libsql/web')
+  : await import('drizzle-orm/libsql/node');
+
+export const orm = drizzle({
+  connection: { url: urlBase, authToken: env('DATABASE_AUTH_TOKEN') },
+  schema: t,
+}) as LibSQLDatabase<typeof t>;
 
 const id = () => crypto.randomUUID();
 const ahora = () => new Date().toISOString();
