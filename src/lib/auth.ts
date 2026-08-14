@@ -3,8 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { orm } from './sqlite';
 import * as t from './schema';
 
-const env = (clave: string): string | undefined =>
-  (import.meta as { env?: Record<string, string> }).env?.[clave] ?? process.env[clave];
+import { env, sitioUrl } from './entorno';
 
 /*
  * Autenticación. Los usuarios viven en la misma base que el catálogo y los
@@ -28,7 +27,9 @@ export const auth = betterAuth({
   }),
 
   secret: env('BETTER_AUTH_SECRET'),
-  baseURL: env('PUBLIC_SITE_URL') ?? 'http://localhost:4321',
+  // En Vercel sale de VERCEL_URL si no hay dominio propio configurado, para que
+  // la sesión no se rompa en los despliegues de previsualización.
+  baseURL: sitioUrl(),
 
   emailAndPassword: {
     enabled: true,

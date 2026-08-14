@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { crearSesionCheckout } from '@/lib/stripe';
 import { cotizar } from '@/lib/shipping';
 import { calcularAnticipo, generarFolio } from '@/lib/money';
+import { sitioUrl } from '@/lib/entorno';
 import type { ItemCarrito, Pedido } from '@/lib/types';
 
 export const prerender = false;
@@ -71,7 +72,7 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     email: datos.email,
     folio,
     usuarioId: locals.usuario?.id ?? null,
-    origen: import.meta.env.PUBLIC_SITE_URL || url.origin,
+    origen: sitioUrl() || url.origin,
   });
 
   /* El pedido se guarda como pendiente ANTES de mandar al cliente a Stripe.

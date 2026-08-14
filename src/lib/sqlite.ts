@@ -3,19 +3,21 @@ import { drizzle } from 'drizzle-orm/libsql';
 import { and, asc, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
 import * as t from './schema';
 import { ErrorDeDatos, type FiltroProductos, type Repositorio } from './repositorio';
+import { env, verificarBaseDeDatos } from './entorno';
 import type { Categoria, ItemCarrito, Pedido, Producto, Sucursal } from './types';
 
 /*
  * Implementación sobre libSQL: archivo local en desarrollo, Turso en producción.
  * El mismo cliente sirve para ambos; solo cambia DATABASE_URL.
  */
-/* Este módulo lo cargan tanto Astro (que expone .env en import.meta.env) como
-   los scripts de mantenimiento bajo tsx (que solo tienen process.env). */
-const env = (clave: string): string | undefined =>
-  (import.meta as { env?: Record<string, string> }).env?.[clave] ?? process.env[clave];
+const urlBase = env('DATABASE_URL') ?? 'file:./orta.db';
+
+// En local, un archivo SQLite; en Vercel, Turso. Si al desplegar quedó
+// apuntando al archivo, se avisa aquí en vez de fallar más tarde sin contexto.
+verificarBaseDeDatos(urlBase);
 
 const cliente = createClient({
-  url: env('DATABASE_URL') ?? 'file:./orta.db',
+  url: urlBase,
   authToken: env('DATABASE_AUTH_TOKEN'),
 });
 
