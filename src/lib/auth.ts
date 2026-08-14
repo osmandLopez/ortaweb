@@ -1,9 +1,28 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { orm } from './sqlite';
+import { memoryAdapter } from 'better-auth/adapters/memory';
 import * as t from './schema';
 
-import { env, sitioUrl } from './entorno';
+import { env, modoDemo, sitioUrl } from './entorno';
+
+/*
+ * En modo demo las cuentas viven en memoria: se puede registrar y entrar para
+ * enseñar el flujo, pero la sesión no sobrevive al reciclado de la función.
+ * Con base real, los usuarios van a la misma base que el catálogo y los pedidos.
+ */
+const almacen = modoDemo
+  ? memoryAdapter({})
+  : drizzleAdapter((await import('./sqlite')).orm, {
+      provider: 'sqlite',
+      // Las claves son los modelos de Better Auth; los valores, mis tablas.
+      // Así el SQL queda en español sin que el adaptador tenga que saberlo.
+      schema: {
+        user: t.usuarios,
+        session: t.sesiones,
+        account: t.cuentas,
+        verification: t.verificaciones,
+      },
+    });
 
 /*
  * Autenticación. Los usuarios viven en la misma base que el catálogo y los
@@ -14,19 +33,11 @@ import { env, sitioUrl } from './entorno';
  * middleware para decidir el acceso a /admin y /cuenta.
  */
 export const auth = betterAuth({
-  database: drizzleAdapter(orm, {
-    provider: 'sqlite',
-    // Las claves son los modelos de Better Auth; los valores, mis tablas.
-    // Así el SQL queda en español sin que el adaptador tenga que saberlo.
-    schema: {
-      user: t.usuarios,
-      session: t.sesiones,
-      account: t.cuentas,
-      verification: t.verificaciones,
-    },
-  }),
+  database: almacen,
 
-  secret: env('BETTER_AUTH_SECRET'),
+  // Sin secreto propio Better Auth no arranca. En modo demo se usa uno fijo:
+  // las sesiones son de usar y tirar, no hay nada que proteger todavía.
+  secret: env('BETTER_AUTH_SECRET') ?? (modoDemo ? 'orta-demo-sin-secreto-configurado' : undefined),
   // En Vercel sale de VERCEL_URL si no hay dominio propio configurado, para que
   // la sesión no se rompa en los despliegues de previsualización.
   baseURL: sitioUrl(),

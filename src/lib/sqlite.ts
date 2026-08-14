@@ -2,18 +2,14 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { and, asc, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
 import * as t from './schema';
 import { ErrorDeDatos, type FiltroProductos, type Repositorio } from './repositorio';
-import { env, verificarBaseDeDatos } from './entorno';
+import { env, urlBaseDeDatos } from './entorno';
 import type { Categoria, ItemCarrito, Pedido, Producto, Sucursal } from './types';
 
 /*
  * Implementación sobre libSQL: archivo local en desarrollo, Turso en producción.
  * El mismo cliente sirve para ambos; solo cambia DATABASE_URL.
  */
-const urlBase = env('DATABASE_URL') ?? 'file:./orta.db';
-
-// En local, un archivo SQLite; en Vercel, Turso. Si al desplegar quedó
-// apuntando al archivo, se avisa aquí en vez de fallar más tarde sin contexto.
-verificarBaseDeDatos(urlBase);
+const urlBase = urlBaseDeDatos;
 
 /*
  * Qué controlador se carga depende de a dónde apunta la base.

@@ -40,19 +40,26 @@ export function sitioUrl(): string {
   return 'http://localhost:4321';
 }
 
-/**
- * Falla temprano y con un mensaje que se entiende.
- *
- * El error por defecto de libSQL al no encontrar las tablas no dice nada del
- * problema real, que es haber desplegado apuntando a un archivo local.
- */
-export function verificarBaseDeDatos(url: string): void {
-  if (!enVercel) return;
-  if (!url.startsWith('file:')) return;
+/** A dónde apunta la base. En local, el archivo SQLite de desarrollo. */
+export const urlBaseDeDatos = env('DATABASE_URL') ?? 'file:./orta.db';
 
-  throw new Error(
-    'DATABASE_URL apunta a un archivo local (' + url + ') y en Vercel el disco es de solo lectura y efímero. ' +
-      'Crea una base en Turso, aplica las migraciones con `npm run db:migrate`, y define DATABASE_URL ' +
-      '(libsql://…) y DATABASE_AUTH_TOKEN en las variables de entorno del proyecto.',
+/**
+ * Modo demo: el sitio se sirve con el catálogo de muestra en memoria.
+ *
+ * En Vercel el disco es de solo lectura y efímero, así que un DATABASE_URL de
+ * archivo no puede funcionar. Antes eso reventaba al cargar el módulo y dejaba
+ * el sitio entero en 500; ahora arranca con datos de muestra, que es lo que hace
+ * falta para enseñar el sitio antes de contratar la base.
+ *
+ * En cuanto DATABASE_URL apunte a Turso (libsql://…), esto pasa a false solo y
+ * el sitio usa la base real sin tocar código.
+ */
+export const modoDemo = enVercel && urlBaseDeDatos.startsWith('file:');
+
+if (modoDemo) {
+  console.warn(
+    '[orta] Modo demo: sin DATABASE_URL remota, el catálogo sale del seed en memoria y ' +
+      'nada de lo que se escriba se conserva. Define DATABASE_URL (libsql://…) y ' +
+      'DATABASE_AUTH_TOKEN en las variables de entorno del proyecto para usar la base real.',
   );
 }
