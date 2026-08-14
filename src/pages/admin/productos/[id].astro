@@ -1,0 +1,27 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import ProductForm from '@/components/admin/ProductForm';
+import { db } from '@/lib/db';
+
+const producto = await db.obtenerProductoPorId(Astro.params.id!);
+if (!producto) return Astro.redirect('/admin/productos', 302);
+
+const categorias = await db.listarCategorias();
+---
+
+<AdminLayout titulo={`Editar ${producto.nombre}`} activo="/admin/productos">
+  <nav aria-label="Ruta" class="etiqueta flex items-center gap-2 text-tinta-500">
+    <a href="/admin/productos" class="hover:text-tinta-900">Productos</a>
+    <span aria-hidden="true">/</span>
+    <span class="text-tinta-900">Editar</span>
+  </nav>
+
+  <div class="mt-4 flex flex-wrap items-end justify-between gap-4">
+    <h1 class="rotulo rotulo-negro text-rotulo-sm text-tinta-900">{producto.nombre}</h1>
+    <a href={`/producto/${producto.slug}`} class="etiqueta text-cielo-600 underline">Ver en la tienda</a>
+  </div>
+
+  <div class="mt-8">
+    <ProductForm client:load categorias={categorias} producto={producto} />
+  </div>
+</AdminLayout>

@@ -1,0 +1,74 @@
+---
+import ProductoImagen from './ProductoImagen.astro';
+import AddToCart from '@/components/islands/AddToCart';
+import { calcularAnticipo, descuento, precio } from '@/lib/money';
+import type { Producto } from '@/lib/types';
+
+interface Props {
+  producto: Producto;
+  loading?: 'lazy' | 'eager';
+}
+const { producto, loading = 'lazy' } = Astro.props;
+
+const rebaja = descuento(producto.precio, producto.precioAnterior);
+const anticipo = producto.apartable ? calcularAnticipo(producto.precio, producto.anticipoMinimo) : 0;
+const agotado = producto.stock <= 0;
+const pocas = !agotado && producto.stock <= 5;
+---
+
+<article class="group relative flex flex-col">
+  <ProductoImagen
+    src={producto.imagenes[0]}
+    alt={producto.nombre}
+    sku={producto.sku}
+    loading={loading}
+    class="rounded-md transition group-hover:border-tinta-900"
+  >
+    <div class="absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
+      {rebaja && <span class="insignia-temporada">−{rebaja}%</span>}
+      {producto.apartable && <span class="insignia-apartado">Apartable</span>}
+      {agotado && <span class="insignia-agotado">Agotado</span>}
+    </div>
+  </ProductoImagen>
+
+  <div class="flex flex-1 flex-col pt-3">
+    <h3 class="text-sm font-bold leading-snug text-tinta-900">
+      <a href={`/producto/${producto.slug}`} class="after:absolute after:inset-0 hover:text-cielo-600">
+        {producto.nombre}
+      </a>
+    </h3>
+
+    <div class="mt-1.5 flex items-baseline gap-2">
+      <p class="font-nota text-base tabular-nums text-tinta-900">{precio(producto.precio)}</p>
+      {producto.precioAnterior && (
+        <p class="font-nota text-xs tabular-nums text-tinta-400 line-through">
+          {precio(producto.precioAnterior)}
+        </p>
+      )}
+    </div>
+
+    {producto.apartable && (
+      <p class="mt-1 font-nota text-[11px] text-mistico-700">
+        o apártalo con {precio(anticipo)}
+      </p>
+    )}
+    {pocas && (
+      <p class="mt-1 font-nota text-[11px] text-tinta-500">Quedan {producto.stock}</p>
+    )}
+
+    <div class="relative z-10 mt-3">
+      <AddToCart
+        client:visible
+        compacto
+        productoId={producto.id}
+        slug={producto.slug}
+        nombre={producto.nombre}
+        precioCentavos={producto.precio}
+        imagen={producto.imagenes[0] ?? ''}
+        stock={producto.stock}
+        apartable={producto.apartable}
+        anticipo={anticipo}
+      />
+    </div>
+  </div>
+</article>

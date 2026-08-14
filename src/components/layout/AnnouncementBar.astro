@@ -1,0 +1,37 @@
+---
+/*
+ * Cinta del mostrador. Repite los tres avisos que la tienda física pone en el
+ * cristal. El contenido se duplica para que el desplazamiento no tenga costura;
+ * la copia duplicada queda oculta a lectores de pantalla.
+ */
+const avisos = [
+  'Envío gratis en compras mayores a $999',
+  'Apartados desde 20% de anticipo',
+  'Recoge hoy mismo en Orta Centro',
+];
+---
+
+<div class="bg-cielo-500 text-white">
+  <div class="flex overflow-hidden py-2">
+    <ul
+      class="flex shrink-0 animate-cinta items-center gap-10 whitespace-nowrap pr-10 motion-reduce:animate-none"
+      aria-label="Avisos de la tienda"
+    >
+      {avisos.map((a) => (
+        <li class="etiqueta flex items-center gap-3">
+          <span aria-hidden="true" class="text-cielo-200">◆</span>{a}
+        </li>
+      ))}
+    </ul>
+    <ul
+      class="flex shrink-0 animate-cinta items-center gap-10 whitespace-nowrap pr-10 motion-reduce:hidden"
+      aria-hidden="true"
+    >
+      {avisos.map((a) => (
+        <li class="etiqueta flex items-center gap-3">
+          <span class="text-cielo-200">◆</span>{a}
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>

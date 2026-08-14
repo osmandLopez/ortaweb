@@ -1,0 +1,58 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { db } from '@/lib/db';
+import { precio } from '@/lib/money';
+
+const productos = await db.listarProductos();
+const categorias = await db.listarCategorias();
+const nombreCategoria = (id: string) => categorias.find((c) => c.id === id)?.nombre ?? '—';
+---
+
+<AdminLayout titulo="Productos" activo="/admin/productos">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="rotulo rotulo-negro text-rotulo-sm text-tinta-900">Productos</h1>
+      <p class="mt-1 font-nota text-[11px] text-tinta-500">{productos.length} en catálogo</p>
+    </div>
+    <a href="/admin/productos/nuevo" class="btn-primario">Agregar producto</a>
+  </div>
+
+  <div class="nota-seccion mt-6 overflow-x-auto p-0">
+    <table class="w-full min-w-[46rem] text-left">
+      <thead>
+        <tr class="border-b border-tinta-200">
+          {['Producto', 'Categoría', 'Precio', 'Stock', 'Estado', ''].map((h) => (
+            <th scope="col" class="etiqueta px-4 py-3 text-tinta-400">{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-tinta-200">
+        {productos.map((p) => (
+          <tr class="hover:bg-tinta-50">
+            <td class="px-4 py-3">
+              <span class="block text-sm font-bold text-tinta-900">{p.nombre}</span>
+              <span class="font-nota text-[11px] text-tinta-400">{p.sku}</span>
+            </td>
+            <td class="px-4 py-3 text-sm text-tinta-600">{nombreCategoria(p.categoriaId)}</td>
+            <td class="px-4 py-3 font-nota text-sm tabular-nums text-tinta-900">{precio(p.precio)}</td>
+            <td class="px-4 py-3">
+              <span class:list={['font-nota text-sm tabular-nums', p.stock === 0 ? 'text-red-600' : p.stock <= 5 ? 'text-oro-700' : 'text-tinta-900']}>
+                {p.stock}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              <span class="flex flex-wrap gap-1.5">
+                {p.temporada && <span class="insignia-temporada">Temporada</span>}
+                {p.apartable && <span class="insignia-apartado">Apartable</span>}
+                {!p.activo && <span class="insignia-agotado">Oculto</span>}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <a href={`/admin/productos/${p.id}`} class="etiqueta text-cielo-600 underline">Editar</a>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

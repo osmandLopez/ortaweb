@@ -1,0 +1,102 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { db } from '@/lib/db';
+import { precio } from '@/lib/money';
+
+/*
+ * Página de retorno de Stripe. Es informativa: NO confirma el cobro.
+ * Quien mueve el estado del pedido es el webhook. Si el usuario llega antes
+ * de que el evento aterrice, mostramos "estamos confirmando".
+ */
+const sessionId = Astro.url.searchParams.get('session_id');
+const pedido = sessionId ? await db.obtenerPedidoPorSesion(sessionId) : null;
+const confirmado = pedido && pedido.estado !== 'pendiente_pago';
+const sucursales = await db.listarSucursales();
+const sucursal = pedido?.sucursalId ? sucursales.find((s) => s.id === pedido.sucursalId) : null;
+---
+
+<BaseLayout titulo="Pedido recibido" fondo="mostrador">
+  <div class="contenedor py-16">
+    <div class="mx-auto max-w-xl">
+      <div class="nota shadow-mostrador" style="--nota-muesca: #F7F7F8">
+        <div class="px-6 pt-7">
+          <p class="etiqueta text-cielo-600">
+            {confirmado ? 'Pago confirmado' : 'Estamos confirmando tu pago'}
+          </p>
+          <h1 class="rotulo rotulo-negro mt-3 text-rotulo-sm text-tinta-900">
+            {pedido?.esApartado ? 'Apartado abierto' : 'Gracias por tu compra'}
+          </h1>
+          {pedido && (
+            <p class="mt-2 font-nota text-xs text-tinta-500">Folio {pedido.folio}</p>
+          )}
+        </div>
+
+        {pedido ? (
+          <>
+            <div class="px-6 py-6">
+              <dl class="space-y-2 text-sm">
+                {pedido.items.map((i) => (
+                  <div class="guia">
+                    <dt class="text-tinta-600">
+                      {i.nombre} <span class="font-nota text-[11px] text-tinta-400">×{i.cantidad}</span>
+                    </dt>
+                    <dd class="font-nota tabular-nums text-tinta-900">
+                      {precio((i.modo === 'apartado' ? i.anticipo : i.precio) * i.cantidad)}
+                    </dd>
+                  </div>
+                ))}
+                {pedido.envio > 0 && (
+                  <div class="guia">
+                    <dt class="text-tinta-600">Envío</dt>
+                    <dd class="font-nota tabular-nums text-tinta-900">{precio(pedido.envio)}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+
+            <div class="nota-corte"></div>
+
+            <div class="px-6 py-6">
+              <dl class="space-y-2 text-sm">
+                <div class="guia">
+                  <dt class="font-bold text-tinta-900">Pagaste</dt>
+                  <dd class="font-nota text-lg font-bold tabular-nums text-tinta-900">{precio(pedido.pagado)}</dd>
+                </div>
+                {pedido.esApartado && (
+                  <div class="guia">
+                    <dt class="text-mistico-700">Saldo por liquidar</dt>
+                    <dd class="font-nota tabular-nums text-mistico-700">{precio(pedido.total - pedido.pagado)}</dd>
+                  </div>
+                )}
+              </dl>
+
+              <p class="mt-5 text-sm leading-relaxed text-tinta-600">
+                {sucursal
+                  ? `Te avisamos por correo cuando esté listo en ${sucursal.nombre}. ${sucursal.horario}.`
+                  : 'Te enviamos la guía de rastreo por correo en cuanto salga de bodega.'}
+              </p>
+
+              <div class="mt-6 flex flex-wrap gap-3">
+                <a href="/tienda" class="btn-primario">Seguir comprando</a>
+                {pedido.usuarioId && <a href="/cuenta/pedidos" class="btn-linea">Ver mis pedidos</a>}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div class="px-6 py-8">
+            <p class="text-sm text-tinta-600">
+              No encontramos ese pedido. Si tu tarjeta ya fue cargada, escríbenos con el
+              correo de confirmación y lo resolvemos.
+            </p>
+            <a href="/contacto" class="btn-linea mt-5">Contactar a la tienda</a>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // El carrito se vacía solo al aterrizar en la página de éxito.
+    import('@/stores/cart').then(({ vaciar }) => vaciar());
+  </script>
+</BaseLayout>

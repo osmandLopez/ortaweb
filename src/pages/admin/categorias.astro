@@ -1,0 +1,19 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import CategoryForm from '@/components/admin/CategoryForm';
+import { db } from '@/lib/db';
+
+const categorias = await db.listarCategorias();
+---
+
+<AdminLayout titulo="Categorías" activo="/admin/categorias">
+  <h1 class="rotulo rotulo-negro text-rotulo-sm text-tinta-900">Categorías</h1>
+  <p class="mt-1 max-w-lg text-sm text-tinta-500">
+    El menú de la tienda se arma solo con lo que hay aquí. El catálogo admite dos
+    niveles: categoría y subcategoría.
+  </p>
+
+  <div class="mt-8">
+    <CategoryForm client:load categorias={categorias} />
+  </div>
+</AdminLayout>

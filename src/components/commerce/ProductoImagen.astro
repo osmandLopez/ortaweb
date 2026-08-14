@@ -1,0 +1,34 @@
+---
+/*
+ * Marco de producto. Si hay foto la usa; si no, dibuja un bloque de mostrador
+ * derivado del SKU para que el catálogo se vea completo desde el primer día
+ * y el admin pueda subir imágenes después sin huecos rotos.
+ */
+interface Props {
+  src?: string;
+  alt: string;
+  sku: string;
+  ratio?: string;
+  class?: string;
+  loading?: 'lazy' | 'eager';
+}
+const { src, alt, sku, ratio = '4 / 5', class: clase = '', loading = 'lazy' } = Astro.props;
+
+const tonos = ['bg-cielo-50', 'bg-oro-50', 'bg-mistico-50', 'bg-tinta-100'];
+const tono = tonos[[...sku].reduce((n, c) => n + c.charCodeAt(0), 0) % tonos.length];
+---
+
+<div
+  class:list={['relative overflow-hidden border border-tinta-200 bg-white', clase]}
+  style={`aspect-ratio: ${ratio}`}
+>
+  {src ? (
+    <img src={src} alt={alt} loading={loading} decoding="async" class="h-full w-full object-cover" />
+  ) : (
+    <div class:list={['flex h-full w-full items-end justify-between p-3', tono]} role="img" aria-label={alt}>
+      <span class="font-nota text-[10px] uppercase tracking-[0.14em] text-tinta-400">{sku}</span>
+      <span aria-hidden="true" class="h-8 w-8 bg-troquel-v opacity-60"></span>
+    </div>
+  )}
+  <slot />
+</div>

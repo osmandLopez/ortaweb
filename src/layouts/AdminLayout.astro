@@ -1,0 +1,83 @@
+---
+import '@/styles/global.css';
+import Logo from '@/components/layout/Logo.astro';
+
+interface Props {
+  titulo: string;
+  activo?: string;
+}
+const { titulo, activo } = Astro.props;
+const usuario = Astro.locals.usuario!;
+
+const secciones = [
+  { href: '/admin', texto: 'Resumen' },
+  { href: '/admin/productos', texto: 'Productos' },
+  { href: '/admin/categorias', texto: 'Categorías' },
+  { href: '/admin/pedidos', texto: 'Pedidos' },
+  { href: '/admin/apartados', texto: 'Apartados' },
+];
+---
+
+<!doctype html>
+<html lang="es-MX" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>{titulo} · Panel Orta</title>
+  </head>
+  <body class="flex min-h-full flex-col bg-papel-mostrador">
+    <header class="sticky top-0 z-30 border-b border-tinta-200 bg-white">
+      <div class="contenedor flex items-center gap-6 py-3">
+        <a href="/" class="flex shrink-0 items-center gap-2.5" aria-label="Orta Novedades, ir a la tienda">
+          <Logo alto="sm" prioridad />
+          <span class="font-nota text-[9px] uppercase tracking-[0.3em] text-tinta-400">panel</span>
+        </a>
+
+        <nav aria-label="Secciones del panel" class="hidden gap-1 md:flex">
+          {secciones.map((s) => (
+            <a
+              href={s.href}
+              aria-current={activo === s.href ? 'page' : undefined}
+              class:list={[
+                'etiqueta rounded px-3 py-2 transition',
+                activo === s.href ? 'bg-tinta-900 text-white' : 'text-tinta-600 hover:bg-tinta-100',
+              ]}
+            >
+              {s.texto}
+            </a>
+          ))}
+        </nav>
+
+        <div class="ml-auto flex items-center gap-3">
+          <span class="hidden text-right sm:block">
+            <span class="block text-xs font-bold text-tinta-900">{usuario.nombre}</span>
+            <span class="block font-nota text-[10px] uppercase tracking-[0.14em] text-tinta-400">
+              Administrador
+            </span>
+          </span>
+          <a href="/" class="btn-linea px-3 py-2 text-xs">Ver tienda</a>
+        </div>
+      </div>
+
+      <nav aria-label="Secciones del panel" class="contenedor flex gap-1 overflow-x-auto pb-2 md:hidden">
+        {secciones.map((s) => (
+          <a
+            href={s.href}
+            class:list={[
+              'etiqueta shrink-0 rounded px-3 py-2',
+              activo === s.href ? 'bg-tinta-900 text-white' : 'text-tinta-600',
+            ]}
+          >
+            {s.texto}
+          </a>
+        ))}
+      </nav>
+    </header>
+
+    <main class="contenedor flex-1 py-10">
+      <slot />
+    </main>
+  </body>
+</html>

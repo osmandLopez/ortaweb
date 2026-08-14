@@ -1,0 +1,28 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Catalogo from '@/components/commerce/Catalogo.astro';
+import { db } from '@/lib/db';
+
+const q = Astro.url.searchParams.get('q') ?? undefined;
+const orden = (Astro.url.searchParams.get('orden') ?? 'reciente') as 'reciente' | 'precio-asc' | 'precio-desc';
+
+const productos = await db.listarProductos({ busqueda: q, orden });
+const categorias = await db.listarCategorias();
+---
+
+<BaseLayout titulo={q ? `Resultados para “${q}”` : 'Tienda'} activo="/tienda">
+  <div class="border-b border-tinta-200 bg-papel-mostrador">
+    <div class="contenedor py-10">
+      <h1 class="rotulo rotulo-negro text-rotulo text-tinta-900">
+        {q ? 'Resultados' : 'Todo el catálogo'}
+      </h1>
+      <p class="mt-3 max-w-lg text-tinta-600">
+        {q
+          ? `Lo que encontramos para “${q}”.`
+          : 'Novedades, temporada, papelería, hogar y regalo. Todo lo que hay hoy en el mostrador.'}
+      </p>
+    </div>
+  </div>
+
+  <Catalogo productos={productos} categorias={categorias} orden={orden} busqueda={q} />
+</BaseLayout>

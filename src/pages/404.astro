@@ -1,0 +1,17 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+
+<BaseLayout titulo="Página no encontrada" fondo="mostrador">
+  <div class="contenedor py-24 text-center">
+    <p class="etiqueta text-tinta-400">Error 404</p>
+    <h1 class="rotulo rotulo-negro mt-4 text-rotulo-xl text-tinta-900">Aquí no hay nada</h1>
+    <p class="mx-auto mt-5 max-w-sm text-tinta-600">
+      La página que buscas cambió de lugar o ya no existe. El catálogo sigue completo.
+    </p>
+    <div class="mt-8 flex flex-wrap justify-center gap-3">
+      <a href="/tienda" class="btn-primario">Ver el catálogo</a>
+      <a href="/contacto" class="btn-linea">Preguntar en la tienda</a>
+    </div>
+  </div>
+</BaseLayout>

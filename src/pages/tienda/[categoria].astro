@@ -1,0 +1,63 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Catalogo from '@/components/commerce/Catalogo.astro';
+import { db } from '@/lib/db';
+
+const { categoria: slug } = Astro.params;
+const categorias = await db.listarCategorias();
+const categoria = categorias.find((c) => c.slug === slug && c.activa);
+
+if (!categoria) return Astro.redirect('/tienda', 302);
+
+const orden = (Astro.url.searchParams.get('orden') ?? 'reciente') as 'reciente' | 'precio-asc' | 'precio-desc';
+const productos = await db.listarProductos({ categoriaSlug: categoria.slug, orden });
+const madre = categoria.padreId ? categorias.find((c) => c.id === categoria.padreId) : null;
+const subcategorias = categorias.filter((c) => c.padreId === categoria.id && c.activa);
+
+const raya = {
+  cielo: 'bg-cielo-500',
+  oro: 'bg-oro-500',
+  mistico: 'bg-mistico-500',
+  tinta: 'bg-tinta-900',
+}[categoria.acento];
+---
+
+<BaseLayout titulo={categoria.nombre} activo="/tienda">
+  <div class="border-b border-tinta-200 bg-papel-mostrador">
+    <div class="contenedor py-10">
+      <nav aria-label="Ruta" class="etiqueta flex flex-wrap items-center gap-2 text-tinta-500">
+        <a href="/tienda" class="hover:text-tinta-900">Tienda</a>
+        {madre && (
+          <>
+            <span aria-hidden="true">/</span>
+            <a href={`/tienda/${madre.slug}`} class="hover:text-tinta-900">{madre.nombre}</a>
+          </>
+        )}
+        <span aria-hidden="true">/</span>
+        <span class="text-tinta-900">{categoria.nombre}</span>
+      </nav>
+
+      <span class:list={['mt-6 block h-1 w-12 rounded-full', raya]} aria-hidden="true"></span>
+      <h1 class="rotulo rotulo-negro mt-4 text-rotulo text-tinta-900">{categoria.nombre}</h1>
+
+      {subcategorias.length > 0 && (
+        <ul class="mt-5 flex flex-wrap gap-2">
+          {subcategorias.map((s) => (
+            <li>
+              <a href={`/tienda/${s.slug}`} class="etiqueta rounded-full border border-tinta-300 bg-white px-3.5 py-2 text-tinta-600 hover:border-tinta-900 hover:text-tinta-900">
+                {s.nombre}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+
+  <Catalogo
+    productos={productos}
+    categorias={categorias}
+    activo={madre ? madre.slug : categoria.slug}
+    orden={orden}
+  />
+</BaseLayout>

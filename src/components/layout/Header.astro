@@ -1,0 +1,72 @@
+---
+import AnnouncementBar from './AnnouncementBar.astro';
+import Navbar from './Navbar.astro';
+import CartButton from '@/components/islands/CartButton';
+import BotonSalir from '@/components/islands/BotonSalir';
+import Logo from './Logo.astro';
+import { db } from '@/lib/db';
+import { rolDe } from '@/lib/session';
+
+interface Props {
+  activo?: string;
+}
+const { activo } = Astro.props;
+const categorias = await db.listarCategorias();
+const usuario = Astro.locals.usuario;
+const rol = rolDe(usuario);
+---
+
+<header class="sticky top-0 z-40 bg-white">
+  <AnnouncementBar />
+
+  <div class="border-b border-tinta-200">
+    <div class="contenedor flex items-center gap-4 py-3.5 sm:gap-8">
+      <a href="/" class="shrink-0" aria-label="Orta Novedades, inicio">
+        <Logo alto="md" prioridad />
+      </a>
+
+      <form action="/tienda" method="get" role="search" class="hidden flex-1 md:block">
+        <label for="q" class="sr-only">Buscar en el catálogo</label>
+        <div class="flex items-center gap-2 border-b border-tinta-300 pb-1.5 focus-within:border-cielo-500">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="text-tinta-400" aria-hidden="true">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" />
+            <path d="M11 11l4 4" stroke="currentColor" stroke-width="1.5" />
+          </svg>
+          <input
+            id="q" name="q" type="search" autocomplete="off"
+            placeholder="Busca vajillas, peluches, papelería…"
+            class="w-full bg-transparent text-sm text-tinta-900 placeholder:text-tinta-400 focus:outline-none"
+          />
+        </div>
+      </form>
+
+      <div class="ml-auto flex items-center gap-1 sm:gap-2">
+        {rol === 'admin' && (
+          <a href="/admin" class="etiqueta hidden rounded bg-tinta-900 px-3 py-2 text-white sm:inline-block">
+            Panel
+          </a>
+        )}
+        <a
+          href={rol === 'invitado' ? '/entrar' : '/cuenta'}
+          class="etiqueta hidden items-center gap-2 px-3 py-2 text-tinta-600 hover:text-tinta-900 sm:inline-flex"
+        >
+          {rol === 'invitado' ? 'Entrar' : usuario!.nombre.split(' ')[0]}
+        </a>
+        {rol !== 'invitado' && (
+          <BotonSalir
+            client:load
+            class="etiqueta hidden px-3 py-2 text-tinta-400 hover:text-tinta-900 sm:inline-flex"
+          />
+        )}
+        <a href="/cuenta/deseos" class="p-2 text-tinta-600 hover:text-tinta-900" aria-label="Lista de deseos">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M10 17S3 12.6 3 7.9A3.9 3.9 0 0110 5.6a3.9 3.9 0 017 2.3C17 12.6 10 17 10 17z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+          </svg>
+        </a>
+        <CartButton client:load />
+      </div>
+    </div>
+  </div>
+
+  <Navbar categorias={categorias} activo={activo} />
+</header>

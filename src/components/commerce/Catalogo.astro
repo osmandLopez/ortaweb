@@ -1,0 +1,90 @@
+---
+import ProductCard from './ProductCard.astro';
+import type { Categoria, Producto } from '@/lib/types';
+
+interface Props {
+  productos: Producto[];
+  categorias: Categoria[];
+  /** slug activo en la barra de filtros */
+  activo?: string;
+  base?: string;
+  orden?: string;
+  busqueda?: string;
+}
+const { productos, categorias, activo, base = '/tienda', orden = 'reciente', busqueda } = Astro.props;
+
+const raices = categorias.filter((c) => !c.padreId && c.activa);
+const ordenes = [
+  ['reciente', 'Lo más nuevo'],
+  ['precio-asc', 'Precio: menor a mayor'],
+  ['precio-desc', 'Precio: mayor a menor'],
+];
+---
+
+<div class="contenedor py-10">
+  <div class="flex flex-wrap items-center justify-between gap-4 border-b border-tinta-200 pb-4">
+    <ul class="flex flex-wrap gap-2" aria-label="Filtrar por categoría">
+      <li>
+        <a
+          href={base}
+          class:list={[
+            'etiqueta rounded-full border px-3.5 py-2 transition',
+            !activo ? 'border-tinta-900 bg-tinta-900 text-white' : 'border-tinta-200 text-tinta-600 hover:border-tinta-900',
+          ]}
+        >
+          Todo
+        </a>
+      </li>
+      {raices.map((c) => (
+        <li>
+          <a
+            href={`${base}/${c.slug}`}
+            class:list={[
+              'etiqueta flex items-center gap-2 rounded-full border px-3.5 py-2 transition',
+              activo === c.slug ? 'border-tinta-900 bg-tinta-900 text-white' : 'border-tinta-200 text-tinta-600 hover:border-tinta-900',
+            ]}
+          >
+            {c.acento !== 'tinta' && (
+              <span
+                class:list={[
+                  'h-1.5 w-1.5 rounded-full',
+                  c.acento === 'oro' ? 'bg-oro-500' : c.acento === 'mistico' ? 'bg-mistico-500' : 'bg-cielo-500',
+                ]}
+                aria-hidden="true"
+              ></span>
+            )}
+            {c.nombre}
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <form method="get" class="flex items-center gap-2">
+      {busqueda && <input type="hidden" name="q" value={busqueda} />}
+      <label for="orden" class="etiqueta text-tinta-500">Ordenar</label>
+      <select id="orden" name="orden" class="campo w-auto py-2 text-xs" onchange="this.form.submit()">
+        {ordenes.map(([v, t]) => <option value={v} selected={orden === v}>{t}</option>)}
+      </select>
+      <noscript><button type="submit" class="btn-linea py-2">Aplicar</button></noscript>
+    </form>
+  </div>
+
+  <p class="mt-4 font-nota text-[11px] text-tinta-500">
+    {productos.length} {productos.length === 1 ? 'artículo' : 'artículos'}
+    {busqueda && <> para “{busqueda}”</>}
+  </p>
+
+  {productos.length === 0 ? (
+    <div class="py-20 text-center">
+      <p class="rotulo text-xl text-tinta-900">Nada por aquí todavía</p>
+      <p class="mt-2 text-sm text-tinta-500">
+        Prueba con otra categoría o escríbenos y lo buscamos en bodega.
+      </p>
+      <a href="/contacto" class="btn-linea mt-5">Pregúntanos</a>
+    </div>
+  ) : (
+    <div class="mt-8 grid grid-cols-2 gap-x-5 gap-y-12 md:grid-cols-3 lg:grid-cols-4">
+      {productos.map((p, i) => <ProductCard producto={p} loading={i < 4 ? 'eager' : 'lazy'} />)}
+    </div>
+  )}
+</div>

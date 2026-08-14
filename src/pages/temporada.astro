@@ -1,0 +1,55 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ProductCard from '@/components/commerce/ProductCard.astro';
+import rotulo from '@/assets/temporada-rotulo.webp';
+import { db } from '@/lib/db';
+import { descuento } from '@/lib/money';
+
+const productos = await db.listarProductos({ temporada: true });
+const mayorRebaja = productos.reduce((max, p) => Math.max(max, descuento(p.precio, p.precioAnterior) ?? 0), 0);
+---
+
+<BaseLayout
+  titulo="Ventas de temporada"
+  descripcion="Rebajas de temporada en Orta Novedades. Precios de calendario mientras dure la existencia."
+  activo="/temporada"
+>
+  <section class="bg-oro-500">
+    <div class="contenedor grid items-center gap-10 py-14 lg:grid-cols-[1.1fr_0.9fr]">
+      <div>
+        {/* El rótulo es el encabezado de la sección: lleva el texto en el alt
+            para que la página conserve su h1 sin duplicarlo en pantalla. */}
+        <h1>
+          <Image
+            src={rotulo}
+            alt="Artículos de temporada"
+            width={640}
+            height={357}
+            loading="eager"
+            class="w-full max-w-md drop-shadow-sm lg:max-w-lg"
+          />
+        </h1>
+        <p class="mt-7 max-w-md text-lg leading-relaxed text-tinta-800">
+          Navidad, regreso a clases y todo lo que se mueve con el calendario. Cuando se
+          acaba la existencia, se acaba el precio.
+        </p>
+      </div>
+
+      {mayorRebaja > 0 && (
+        <p class="lg:justify-self-end lg:text-right">
+          <span class="etiqueta block text-oro-900">Hasta</span>
+          <span class="rotulo rotulo-negro block text-rotulo-xl leading-none text-tinta-900">
+            −{mayorRebaja}%
+          </span>
+        </p>
+      )}
+    </div>
+  </section>
+
+  <div class="contenedor py-12">
+    <div class="grid grid-cols-2 gap-x-5 gap-y-12 md:grid-cols-3 lg:grid-cols-4">
+      {productos.map((p, i) => <ProductCard producto={p} loading={i < 4 ? 'eager' : 'lazy'} />)}
+    </div>
+  </div>
+</BaseLayout>

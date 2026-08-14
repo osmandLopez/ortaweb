@@ -1,0 +1,26 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Checkout from '@/components/islands/Checkout';
+import { db } from '@/lib/db';
+
+const sucursales = await db.listarSucursales();
+const usuario = Astro.locals.usuario;
+const cancelado = Astro.url.searchParams.has('cancelado');
+---
+
+<BaseLayout titulo="Pagar" fondo="mostrador">
+  <div class="contenedor py-10">
+    <h1 class="rotulo rotulo-negro text-rotulo text-tinta-900">Pagar</h1>
+    <p class="mt-2 text-tinta-600">Tres pasos y listo. No necesitas cuenta.</p>
+
+    {cancelado && (
+      <p role="status" class="mt-5 rounded-md border border-oro-300 bg-oro-50 px-4 py-3 text-sm text-oro-900">
+        Cancelaste el pago. Tu carrito sigue completo, puedes intentarlo de nuevo cuando quieras.
+      </p>
+    )}
+
+    <div class="mt-8">
+      <Checkout client:load sucursales={sucursales} emailPrevio={usuario?.email ?? ''} />
+    </div>
+  </div>
+</BaseLayout>

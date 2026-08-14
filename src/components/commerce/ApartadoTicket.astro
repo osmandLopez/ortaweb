@@ -1,0 +1,109 @@
+---
+import { calcularAnticipo, precio } from '@/lib/money';
+import type { Producto } from '@/lib/types';
+
+/*
+ * LA NOTA DE APARTADO — elemento firma de la marca.
+ *
+ * Reproduce el recibo que el mostrador entrega al reservar: folio, concepto,
+ * guías punteadas, línea de corte troquelada y el medidor de abonos como
+ * casillas selladas. Cada casilla es un pago real, no una barra decorativa:
+ * el cliente ve cuántos abonos lleva y cuántos le faltan.
+ *
+ * `--nota-muesca` debe igualar el fondo de la sección donde se coloca, porque
+ * las muescas laterales están "perforando" ese fondo.
+ */
+const MESES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+interface Props {
+  producto: Producto;
+  /** abonos ya cubiertos, para la vista de cuenta del cliente */
+  abonosPagados?: number;
+  folio?: string;
+  /** color de fondo que perforan las muescas */
+  fondo?: string;
+  sellada?: boolean;
+  class?: string;
+}
+
+const {
+  producto,
+  abonosPagados = 0,
+  folio = 'ON-DEMO24',
+  fondo = '#F7F7F8',
+  sellada = false,
+  class: clase = '',
+} = Astro.props;
+
+const anticipo = calcularAnticipo(producto.precio, producto.anticipoMinimo);
+const saldo = producto.precio - anticipo;
+const totalAbonos = Math.max(1, Math.ceil(producto.plazoSemanas / 2));
+const porAbono = Math.ceil(saldo / totalAbonos / 100) * 100;
+const pagados = Math.min(abonosPagados, totalAbonos);
+const fechaVence = new Date(Date.now() + producto.plazoSemanas * 7 * 864e5);
+const vence = `${fechaVence.getDate()} de ${MESES[fechaVence.getMonth()]}`;
+---
+
+<article
+  class:list={['nota shadow-mostrador', clase]}
+  style={`--nota-muesca: ${fondo}`}
+  aria-label={`Nota de apartado ${folio}`}
+>
+  <!-- Cabeza de la nota -->
+  <div class="flex items-start justify-between gap-4 px-5 pt-5">
+    <div>
+      <p class="etiqueta text-mistico-600">Nota de apartado</p>
+      <p class="mt-1 font-nota text-xs text-tinta-400">Folio {folio}</p>
+    </div>
+    {sellada && (
+      <p class="animate-sello rounded border-2 border-mistico-500 px-2.5 py-1 font-nota text-[10px] uppercase tracking-[0.18em] text-mistico-600">
+        Liquidado
+      </p>
+    )}
+  </div>
+
+  <div class="px-5 pb-5 pt-4">
+    <h3 class="text-base font-bold leading-snug text-tinta-900">{producto.nombre}</h3>
+
+    <dl class="mt-4 space-y-2 text-sm">
+      <div class="guia">
+        <dt class="text-tinta-600">Precio de lista</dt>
+        <dd class="font-nota tabular-nums text-tinta-900">{precio(producto.precio)}</dd>
+      </div>
+      <div class="guia">
+        <dt class="text-tinta-600">Anticipo ({producto.anticipoMinimo}%)</dt>
+        <dd class="font-nota tabular-nums text-mistico-700">{precio(anticipo)}</dd>
+      </div>
+      <div class="guia">
+        <dt class="text-tinta-600">Saldo en {totalAbonos} abonos</dt>
+        <dd class="font-nota tabular-nums text-tinta-900">{precio(porAbono)} c/u</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="nota-corte"></div>
+
+  <!-- Talón: el medidor de abonos -->
+  <div class="px-5 py-5">
+    <p class="etiqueta text-tinta-400">Abonos</p>
+    <ol class="mt-2.5 flex flex-wrap gap-1.5" aria-label={`${pagados} de ${totalAbonos} abonos cubiertos`}>
+      {Array.from({ length: totalAbonos }, (_, i) => (
+        <li class="abono" data-pagado={i < pagados}>
+          {i < pagados ? '✓' : i + 1}
+        </li>
+      ))}
+    </ol>
+
+    <p class="mt-4 font-nota text-[11px] leading-relaxed text-tinta-500">
+      Vence el {vence}. Puedes abonar en línea o en cualquier sucursal.
+    </p>
+
+    <slot name="accion">
+      <a href={`/producto/${producto.slug}?modo=apartado`} class="btn-apartado mt-4 w-full">
+        Apartar con {precio(anticipo)}
+      </a>
+    </slot>
+  </div>
+</article>

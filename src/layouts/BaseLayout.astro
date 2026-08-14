@@ -1,0 +1,78 @@
+---
+import '@/styles/global.css';
+import Header from '@/components/layout/Header.astro';
+import Footer from '@/components/layout/Footer.astro';
+import CartDrawer from '@/components/islands/CartDrawer';
+
+interface Props {
+  titulo: string;
+  descripcion?: string;
+  activo?: string;
+  /** Deja el fondo blanco en páginas de detalle donde la nota va sobre papel */
+  fondo?: 'mostrador' | 'papel';
+}
+
+const {
+  titulo,
+  descripcion = 'Regalos, novedades y ventas de temporada en Orta Novedades. Compra en línea, recoge en tienda o apártalo con anticipo.',
+  activo,
+  fondo = 'papel',
+} = Astro.props;
+
+const url = Astro.url.href;
+---
+
+<!doctype html>
+<html lang="es-MX" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titulo} · Orta Novedades</title>
+    <meta name="description" content={descripcion} />
+    <link rel="canonical" href={url} />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="theme-color" content="#00A3E0" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Orta Novedades" />
+    <meta property="og:title" content={titulo} />
+    <meta property="og:description" content={descripcion} />
+    <meta property="og:locale" content="es_MX" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Store',
+        name: 'Orta Novedades',
+        currenciesAccepted: 'MXN',
+        paymentAccepted: 'Tarjeta de crédito, tarjeta de débito, Apple Pay, Google Pay',
+      })}
+    />
+  </head>
+
+  <body class:list={['flex min-h-full flex-col', fondo === 'mostrador' && 'bg-papel-mostrador']}>
+    <a
+      href="#contenido"
+      class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-tinta-900 focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+    >
+      Saltar al contenido
+    </a>
+
+    <Header activo={activo} />
+
+    <main id="contenido" class="flex-1">
+      <slot />
+    </main>
+
+    <Footer />
+
+    <!--
+      El cajón va con client:load, no client:idle: "Agregar" lo abre de
+      inmediato y con idle existe una ventana en la que el clic no hace nada.
+    -->
+    <CartDrawer client:load />
+  </body>
+</html>

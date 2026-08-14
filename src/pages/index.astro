@@ -1,0 +1,211 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ProductCard from '@/components/commerce/ProductCard.astro';
+import ApartadoTicket from '@/components/commerce/ApartadoTicket.astro';
+import { db } from '@/lib/db';
+import { precio } from '@/lib/money';
+
+const destacados = await db.listarProductos({ destacado: true, limite: 4 });
+const temporada = await db.listarProductos({ temporada: true, limite: 4 });
+const apartables = await db.listarProductos({ apartable: true, limite: 3 });
+const categorias = (await db.listarCategorias()).filter((c) => !c.padreId);
+const sucursales = await db.listarSucursales();
+
+const estrella = apartables[0]!;
+
+/* El apartado es un proceso real de tres pasos, no una lista decorativa:
+   por eso aquí sí van numerados. */
+const pasos = [
+  { n: '01', titulo: 'Eliges y das anticipo', texto: 'Desde 20% con tarjeta. La pieza sale de piso y queda a tu nombre.' },
+  { n: '02', titulo: 'Abonas a tu ritmo', texto: 'En línea o en mostrador, cuando puedas, hasta la fecha de vencimiento.' },
+  { n: '03', titulo: 'Te la llevas', texto: 'Al liquidar la recoges en sucursal o te la enviamos a casa.' },
+];
+---
+
+<BaseLayout titulo="Novedades, temporada y apartados" activo="/">
+  <!-- HERO: rótulo a la izquierda, nota de apartado viva a la derecha -->
+  <section class="border-b border-tinta-200 bg-papel-mostrador">
+    <div class="contenedor grid items-center gap-12 py-14 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-20">
+      <div>
+        <p class="etiqueta flex items-center gap-2.5 text-tinta-500">
+          <span class="h-1.5 w-1.5 rounded-full bg-cielo-500" aria-hidden="true"></span>
+          Mostrador abierto · {sucursales.length} sucursales
+        </p>
+
+        <h1 class="rotulo rotulo-negro mt-5 text-rotulo-xl text-tinta-900">
+          Llévatelo hoy<br />
+          o <span class="text-mistico-500">apártalo</span><br />
+          desde el 20%
+        </h1>
+
+        <p class="mt-6 max-w-md text-lg leading-relaxed text-tinta-600">
+          Regalos, temporada y novedades para la casa. Compra en línea, recoge en
+          sucursal el mismo día, o reserva con anticipo y abona cuando puedas.
+        </p>
+
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="/tienda" class="btn-primario">Ver el catálogo</a>
+          <a href="/apartados" class="btn-linea">Cómo funciona un apartado</a>
+        </div>
+
+        <ul class="mt-10 flex flex-wrap gap-x-8 gap-y-3">
+          {[
+            ['Envío gratis', 'desde $999'],
+            ['Recoge hoy', 'antes de las 18:00'],
+            ['Pago seguro', 'Stripe · Apple & Google Pay'],
+          ].map(([titulo, detalle]) => (
+            <li>
+              <p class="text-sm font-bold text-tinta-900">{titulo}</p>
+              <p class="font-nota text-[11px] text-tinta-500">{detalle}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="mx-auto w-full max-w-sm lg:mx-0">
+        <ApartadoTicket producto={estrella} abonosPagados={2} folio="ON-K4T9RM" fondo="#F7F7F8" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Categorías: el índice del mostrador -->
+  <section class="contenedor py-14">
+    <div class="flex items-end justify-between gap-4">
+      <h2 class="rotulo text-rotulo-sm text-tinta-900">El mostrador</h2>
+      <a href="/tienda" class="etiqueta text-tinta-500 underline hover:text-tinta-900">Ver todo</a>
+    </div>
+
+    <ul class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {categorias.map((c) => (
+        <li>
+          <a
+            href={`/tienda/${c.slug}`}
+            class="flex h-full flex-col justify-between gap-6 rounded-md border border-tinta-200 bg-white p-4 transition hover:border-tinta-900 hover:shadow-mostrador"
+          >
+            <span
+              class:list={[
+                'h-1 w-8 rounded-full',
+                c.acento === 'oro' ? 'bg-oro-500' : c.acento === 'mistico' ? 'bg-mistico-500' : c.acento === 'cielo' ? 'bg-cielo-500' : 'bg-tinta-900',
+              ]}
+              aria-hidden="true"
+            ></span>
+            <span class="text-sm font-bold leading-snug text-tinta-900">{c.nombre}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <!-- Destacados -->
+  <section class="contenedor pb-16">
+    <div class="flex items-end justify-between gap-4 border-b border-tinta-200 pb-4">
+      <h2 class="rotulo text-rotulo-sm text-tinta-900">Recién llegado</h2>
+      <a href="/tienda" class="etiqueta text-tinta-500 underline hover:text-tinta-900">Ver novedades</a>
+    </div>
+    <div class="mt-8 grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4">
+      {destacados.map((p, i) => <ProductCard producto={p} loading={i < 2 ? 'eager' : 'lazy'} />)}
+    </div>
+  </section>
+
+  <!-- Temporada: la única franja dorada del sitio -->
+  <section class="bg-oro-500">
+    <div class="contenedor py-14">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="etiqueta text-oro-900">Ventas de temporada</p>
+          <h2 class="rotulo rotulo-negro mt-2 text-rotulo text-tinta-900">
+            Precios de calendario
+          </h2>
+          <p class="mt-3 max-w-md text-tinta-800">
+            Rebajas que duran lo que dura la temporada. Cuando se acaba la existencia,
+            se acaba el precio.
+          </p>
+        </div>
+        <a href="/temporada" class="btn-tinta">Ver todo lo rebajado</a>
+      </div>
+
+      <div class="mt-10 grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4">
+        {temporada.map((p) => (
+          <div class="rounded-md bg-white p-3">
+            <ProductCard producto={p} />
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Apartados: el proceso, en púrpura -->
+  <section class="border-b border-tinta-200 bg-white">
+    <div class="contenedor grid gap-12 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+      <div>
+        <p class="etiqueta text-mistico-600">Sistema de apartados</p>
+        <h2 class="rotulo rotulo-negro mt-3 text-rotulo text-tinta-900">
+          Guardado<br />a tu nombre
+        </h2>
+        <p class="mt-5 max-w-sm text-tinta-600">
+          Lo de siempre, ahora en línea: dejas anticipo, la pieza se retira de piso y
+          tú abonas hasta liquidarla. Con folio, recordatorios y todo por escrito.
+        </p>
+
+        <ol class="mt-8 space-y-6">
+          {pasos.map((p) => (
+            <li class="flex gap-5">
+              <span class="font-nota text-sm text-mistico-500">{p.n}</span>
+              <span class="border-l border-tinta-200 pl-5">
+                <span class="block text-sm font-bold text-tinta-900">{p.titulo}</span>
+                <span class="mt-1 block text-sm text-tinta-600">{p.texto}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        <a href="/apartados" class="btn-apartado mt-9">Ver lo que se puede apartar</a>
+      </div>
+
+      <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {apartables.map((p, i) => (
+          <li class:list={[i === 0 && 'sm:col-span-2 lg:col-span-1']}>
+            <a href={`/producto/${p.slug}`} class="block rounded-md border border-tinta-200 p-4 transition hover:border-mistico-500">
+              <p class="text-sm font-bold leading-snug text-tinta-900">{p.nombre}</p>
+              <p class="mt-2 font-nota text-xs text-tinta-500">Precio {precio(p.precio)}</p>
+              <p class="mt-3 font-nota text-lg tabular-nums text-mistico-700">
+                {precio(Math.ceil((p.precio * p.anticipoMinimo) / 100 / 100) * 100)}
+              </p>
+              <p class="font-nota text-[11px] text-tinta-500">
+                de anticipo · {p.plazoSemanas} semanas para liquidar
+              </p>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <!-- Entregas -->
+  <section class="contenedor py-16">
+    <h2 class="rotulo text-rotulo-sm text-tinta-900">Cómo lo recibes</h2>
+    <div class="mt-6 grid gap-5 md:grid-cols-2">
+      <div class="rounded-md border border-tinta-200 p-6">
+        <p class="etiqueta text-cielo-600">Envíos nacionales</p>
+        <p class="mt-3 text-lg font-bold text-tinta-900">Cotiza con tu código postal</p>
+        <p class="mt-2 text-sm text-tinta-600">
+          Tarifa y tiempo estimado antes de pagar, sin sorpresas al final. Gratis a partir
+          de $999 en envío estándar.
+        </p>
+      </div>
+      <div class="rounded-md border border-tinta-200 p-6">
+        <p class="etiqueta text-cielo-600">Recolección en tienda</p>
+        <p class="mt-3 text-lg font-bold text-tinta-900">Elige sucursal y horario</p>
+        <ul class="mt-3 space-y-2.5">
+          {sucursales.map((s) => (
+            <li class="text-sm">
+              <span class="font-bold text-tinta-900">{s.nombre}</span>
+              <span class="block text-tinta-600">{s.direccion}</span>
+              <span class="block font-nota text-[11px] text-tinta-500">{s.horario}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

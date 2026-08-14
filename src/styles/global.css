@@ -1,0 +1,194 @@
+@import '@fontsource-variable/archivo';
+@import '@fontsource/karla/400.css';
+@import '@fontsource/karla/500.css';
+@import '@fontsource/karla/700.css';
+@import '@fontsource/space-mono/400.css';
+@import '@fontsource/space-mono/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --nota-muesca: #f7f7f8; /* color que "perfora" la nota: debe igualar el fondo de la sección */
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-papel text-tinta-900 font-sans antialiased;
+    font-synthesis-weight: none;
+  }
+
+  /* El rótulo vive en el eje ancho de Archivo. Es lo que separa la marca
+     de cualquier grotesca por defecto. */
+  .rotulo {
+    font-family: theme('fontFamily.display');
+    font-variation-settings: 'wdth' 118, 'wght' 700;
+    text-transform: uppercase;
+  }
+  .rotulo-negro {
+    font-variation-settings: 'wdth' 125, 'wght' 800;
+  }
+
+  ::selection {
+    background: theme('colors.cielo.500');
+    color: #fff;
+  }
+
+  /* Piso de calidad: foco visible siempre, nunca outline:none a secas */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid theme('colors.cielo.500');
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .contenedor {
+    @apply mx-auto w-full max-w-mostrador px-5 sm:px-8;
+  }
+
+  .etiqueta {
+    @apply font-nota text-etiqueta uppercase;
+  }
+
+  /* --- Firma: La Nota de Apartado ------------------------------------ */
+
+  .nota {
+    position: relative;
+    background: #fff;
+    border: 1px solid theme('colors.tinta.200');
+    border-radius: theme('borderRadius.nota');
+  }
+
+  /* Línea de corte punteada. Las muescas cuelgan de ella, no de la tarjeta, para
+     que queden alineadas sea cual sea la altura del contenido. */
+  .nota-corte {
+    position: relative;
+    height: 1px;
+    margin: 0 1.25rem;
+    background-image: theme('backgroundImage.troquel');
+  }
+  .nota-corte::before,
+  .nota-corte::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--nota-muesca);
+    border: 1px solid theme('colors.tinta.200');
+    transform: translateY(-50%);
+  }
+  .nota-corte::before {
+    left: -1.875rem; /* 20px de margen + 10px fuera del borde */
+    clip-path: inset(0 0 0 9px);
+  }
+  .nota-corte::after {
+    right: -1.875rem;
+    clip-path: inset(0 9px 0 0);
+  }
+
+  /* Guía de puntos entre concepto e importe, como en un recibo impreso */
+  .guia {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .guia > :first-child {
+    flex: none;
+  }
+  .guia::after {
+    content: '';
+    order: 1;
+    flex: 1 1 auto;
+    height: 0;
+    border-bottom: 1px dotted theme('colors.tinta.300');
+    transform: translateY(-0.2em);
+  }
+  .guia > :last-child {
+    order: 2;
+    flex: none;
+  }
+
+  /* Casillas de abono: el medidor de progreso del apartado */
+  .abono {
+    @apply inline-flex h-6 w-6 items-center justify-center border font-nota text-[10px];
+    border-color: theme('colors.tinta.200');
+    border-radius: 4px;
+    color: theme('colors.tinta.400');
+  }
+  .abono[data-pagado='true'] {
+    background: theme('colors.mistico.500');
+    border-color: theme('colors.mistico.500');
+    color: #fff;
+  }
+
+  /* --- Controles ------------------------------------------------------ */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-bold transition;
+    @apply disabled:cursor-not-allowed disabled:opacity-45;
+  }
+  .btn-primario {
+    @apply btn bg-cielo-500 text-white hover:bg-cielo-600 active:translate-y-px;
+  }
+  .btn-apartado {
+    @apply btn bg-mistico-500 text-white hover:bg-mistico-600 active:translate-y-px;
+  }
+  .btn-linea {
+    @apply btn border border-tinta-300 bg-white text-tinta-900 hover:border-tinta-900;
+  }
+  .btn-tinta {
+    @apply btn bg-tinta-900 text-white hover:bg-tinta-800;
+  }
+
+  .campo {
+    @apply w-full rounded-md border border-tinta-300 bg-white px-3 py-2.5 text-sm text-tinta-900;
+    @apply placeholder:text-tinta-400 focus:border-cielo-500 focus:outline-none focus:ring-4 focus:ring-cielo-100;
+  }
+  .campo-etiqueta {
+    @apply mb-1.5 block font-nota text-[11px] uppercase tracking-[0.12em] text-tinta-500;
+  }
+
+  .insignia {
+    @apply inline-flex items-center gap-1.5 rounded px-2 py-1 font-nota text-[10px] uppercase tracking-[0.14em];
+  }
+  .insignia-temporada {
+    @apply insignia bg-oro-500 text-tinta-900;
+  }
+  .insignia-apartado {
+    @apply insignia bg-mistico-100 text-mistico-800;
+  }
+  .insignia-nuevo {
+    @apply insignia bg-cielo-500 text-white;
+  }
+  .insignia-agotado {
+    @apply insignia bg-tinta-100 text-tinta-500;
+  }
+
+  /* Bloque del panel: papel sobre mostrador, sin sombras difusas */
+  .nota-seccion {
+    @apply rounded-nota border border-tinta-200 bg-white p-5 shadow-mostrador;
+  }
+  .nota-seccion > legend {
+    @apply px-2;
+  }
+}

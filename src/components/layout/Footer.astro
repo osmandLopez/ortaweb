@@ -1,0 +1,107 @@
+---
+import { db } from '@/lib/db';
+import Logo from './Logo.astro';
+
+const sucursales = await db.listarSucursales();
+const anio = new Date().getFullYear();
+
+const columnas = [
+  {
+    titulo: 'Comprar',
+    enlaces: [
+      { href: '/tienda', texto: 'Todo el catálogo' },
+      { href: '/temporada', texto: 'Ventas de temporada' },
+      { href: '/apartados', texto: 'Apartados' },
+      { href: '/tienda/novedades', texto: 'Novedades' },
+    ],
+  },
+  {
+    titulo: 'Tu cuenta',
+    enlaces: [
+      { href: '/cuenta', texto: 'Mi perfil' },
+      { href: '/cuenta/pedidos', texto: 'Mis pedidos' },
+      { href: '/cuenta/apartados', texto: 'Mis apartados' },
+      { href: '/cuenta/deseos', texto: 'Lista de deseos' },
+    ],
+  },
+  {
+    titulo: 'Ayuda',
+    enlaces: [
+      { href: '/envios', texto: 'Envíos y entregas' },
+      { href: '/como-apartar', texto: 'Cómo funciona un apartado' },
+      { href: '/devoluciones', texto: 'Cambios y devoluciones' },
+      { href: '/contacto', texto: 'Contacto' },
+    ],
+  },
+];
+---
+
+<footer class="mt-24 bg-tinta-900 text-tinta-300">
+  <div class="contenedor py-16">
+    <div class="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
+      <div>
+        <Logo alto="md" />
+        <p class="mt-5 max-w-xs text-sm leading-relaxed text-tinta-400">
+          Regalos, temporada y novedades para la casa. Compra en línea, recoge en tienda
+          o apártalo con anticipo.
+        </p>
+        <form class="mt-7 max-w-sm" action="/api/boletin" method="post">
+          <label for="boletin" class="etiqueta text-tinta-500">Avísame de lo que llega</label>
+          <div class="mt-2 flex gap-2">
+            <input
+              id="boletin" name="email" type="email" required placeholder="tu@correo.mx"
+              class="w-full rounded-md border border-tinta-700 bg-tinta-800 px-3 py-2.5 text-sm text-white placeholder:text-tinta-500 focus:border-cielo-500 focus:outline-none"
+            />
+            <button type="submit" class="btn-primario px-4 py-2.5">Suscribirme</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        {columnas.map((col) => (
+          <div>
+            <h2 class="etiqueta text-tinta-500">{col.titulo}</h2>
+            <ul class="mt-4 space-y-2.5">
+              {col.enlaces.map((e) => (
+                <li>
+                  <a href={e.href} class="text-sm text-tinta-300 hover:text-white">{e.texto}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+
+        <div>
+          <h2 class="etiqueta text-tinta-500">Sucursales</h2>
+          <ul class="mt-4 space-y-4">
+            {sucursales.map((s) => (
+              <li class="text-sm">
+                <p class="font-bold text-white">{s.nombre}</p>
+                <p class="text-tinta-400">{s.direccion}</p>
+                <p class="font-nota text-[11px] text-tinta-500">{s.horario}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-14 flex flex-col gap-4 border-t border-tinta-800 pt-6 sm:flex-row sm:items-center sm:justify-between">
+      <p class="font-nota text-[11px] text-tinta-500">
+        © {anio} Orta Novedades · Todos los derechos reservados
+      </p>
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <span class="etiqueta text-tinta-500">Pagos seguros con Stripe</span>
+        <span class="flex gap-1.5" aria-label="Aceptamos tarjetas Visa y Mastercard, Apple Pay y Google Pay">
+          {['Visa', 'MC', 'Amex', ' Pay', 'G Pay'].map((m) => (
+            <span class="rounded border border-tinta-700 px-2 py-1 font-nota text-[10px] text-tinta-400">{m}</span>
+          ))}
+        </span>
+      </div>
+      <ul class="flex gap-5">
+        <li><a href="/privacidad" class="text-xs text-tinta-500 hover:text-white">Privacidad</a></li>
+        <li><a href="/terminos" class="text-xs text-tinta-500 hover:text-white">Términos</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>

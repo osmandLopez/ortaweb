@@ -1,0 +1,103 @@
+---
+import type { Categoria } from '@/lib/types';
+
+interface Props {
+  categorias: Categoria[];
+  activo?: string;
+}
+const { categorias, activo } = Astro.props;
+
+/* El menú principal está fijado por la marca. Las categorías administrables
+   cuelgan de "Tienda" como submenú, para que el panel pueda crecer el catálogo
+   sin que nadie tenga que tocar la navegación. */
+const principal = [
+  { href: '/', texto: 'Inicio', punto: null },
+  { href: '/tienda', texto: 'Tienda', punto: null },
+  { href: '/temporada', texto: 'Ventas de temporada', punto: 'bg-oro-500' },
+  { href: '/apartados', texto: 'Apartados', punto: 'bg-mistico-500' },
+  { href: '/nosotros', texto: 'Sobre nosotros', punto: null },
+  { href: '/contacto', texto: 'Contacto', punto: null },
+];
+
+const raices = categorias.filter((c) => !c.padreId && c.activa);
+const hijasDe = (id: string) => categorias.filter((c) => c.padreId === id && c.activa);
+---
+
+<nav aria-label="Navegación principal" class="border-t border-tinta-200 bg-white">
+  <div class="contenedor">
+    <ul class="hidden items-stretch gap-1 lg:flex">
+      {principal.map((item) => (
+        <li class="group relative">
+          <a
+            href={item.href}
+            aria-current={activo === item.href ? 'page' : undefined}
+            class:list={[
+              'etiqueta flex items-center gap-2 px-4 py-3.5 text-tinta-700 transition hover:text-tinta-900',
+              activo === item.href && 'text-tinta-900',
+            ]}
+          >
+            {item.punto && <span class:list={['h-1.5 w-1.5 rounded-full', item.punto]} aria-hidden="true"></span>}
+            {item.texto}
+          </a>
+          {activo === item.href && (
+            <span class="absolute inset-x-3 bottom-0 h-0.5 bg-tinta-900" aria-hidden="true"></span>
+          )}
+
+          {item.href === '/tienda' && (
+            <div class="invisible absolute left-0 top-full z-40 w-[42rem] border border-tinta-200 bg-white p-6 opacity-0 shadow-alzada transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+              <p class="etiqueta mb-4 text-tinta-400">Categorías</p>
+              <div class="grid grid-cols-3 gap-x-6 gap-y-5">
+                {raices.map((c) => (
+                  <div>
+                    <a href={`/tienda/${c.slug}`} class="block text-sm font-bold text-tinta-900 hover:text-cielo-600">
+                      {c.nombre}
+                    </a>
+                    {hijasDe(c.id).length > 0 && (
+                      <ul class="mt-1.5 space-y-1">
+                        {hijasDe(c.id).map((h) => (
+                          <li>
+                            <a href={`/tienda/${h.slug}`} class="text-sm text-tinta-500 hover:text-tinta-900">
+                              {h.nombre}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+
+    <!-- Móvil: menú nativo, sin JavaScript -->
+    <details class="lg:hidden [&_svg]:open:rotate-45">
+      <summary class="etiqueta flex cursor-pointer list-none items-center gap-2 py-3.5 text-tinta-700 marker:content-none">
+        <svg width="14" height="14" viewBox="0 0 14 14" class="transition-transform" aria-hidden="true">
+          <path d="M7 0v14M0 7h14" stroke="currentColor" stroke-width="1.5" />
+        </svg>
+        Menú y categorías
+      </summary>
+      <ul class="border-t border-tinta-200 py-2">
+        {principal.map((item) => (
+          <li>
+            <a href={item.href} class="flex items-center gap-2 py-2.5 text-sm font-bold text-tinta-900">
+              {item.punto && <span class:list={['h-1.5 w-1.5 rounded-full', item.punto]} aria-hidden="true"></span>}
+              {item.texto}
+            </a>
+          </li>
+        ))}
+        <li class="mt-2 border-t border-tinta-200 pt-3">
+          <p class="etiqueta mb-2 text-tinta-400">Categorías</p>
+          <ul class="grid grid-cols-2 gap-y-2">
+            {raices.map((c) => (
+              <li><a href={`/tienda/${c.slug}`} class="text-sm text-tinta-600">{c.nombre}</a></li>
+            ))}
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </div>
+</nav>

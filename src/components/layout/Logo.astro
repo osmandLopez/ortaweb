@@ -1,0 +1,43 @@
+---
+import { Image } from 'astro:assets';
+import logo from '@/assets/logo-orta.png';
+
+/*
+ * Logotipo de la marca.
+ *
+ * El archivo de origen no trae canal alfa: el cuadriculado que se ve alrededor
+ * son píxeles del PNG, no transparencia. Está así a petición expresa, hasta que
+ * llegue una exportación con alfa real. Cuando llegue, se reemplaza
+ * src/assets/logo-orta.png y no hay que tocar nada más.
+ *
+ * astro:assets genera webp/avif y los tamaños según `width`, así que la página
+ * no arrastra el peso del original.
+ */
+interface Props {
+  /** Alto en pantalla; el ancho sale de la proporción 1.36:1 */
+  alto?: 'sm' | 'md' | 'lg';
+  prioridad?: boolean;
+  class?: string;
+}
+
+const { alto = 'md', prioridad = false, class: clase = '' } = Astro.props;
+
+// Se pide al doble del tamaño de pantalla para que se vea nítido en retina.
+const MEDIDAS = {
+  sm: { render: 176, clases: 'h-10 w-auto' },
+  md: { render: 224, clases: 'h-12 w-auto sm:h-14' },
+  lg: { render: 400, clases: 'h-24 w-auto sm:h-32' },
+} as const;
+
+const { render, clases } = MEDIDAS[alto];
+---
+
+<Image
+  src={logo}
+  alt="Orta Novedades"
+  width={render}
+  height={Math.round(render / 1.36)}
+  loading={prioridad ? 'eager' : 'lazy'}
+  decoding={prioridad ? 'sync' : 'async'}
+  class:list={[clases, clase]}
+/>

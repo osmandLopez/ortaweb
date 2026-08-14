@@ -1,0 +1,25 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import ProductForm from '@/components/admin/ProductForm';
+import { db } from '@/lib/db';
+
+const categorias = await db.listarCategorias();
+---
+
+<AdminLayout titulo="Agregar producto" activo="/admin/productos">
+  <nav aria-label="Ruta" class="etiqueta flex items-center gap-2 text-tinta-500">
+    <a href="/admin/productos" class="hover:text-tinta-900">Productos</a>
+    <span aria-hidden="true">/</span>
+    <span class="text-tinta-900">Nuevo</span>
+  </nav>
+
+  <h1 class="rotulo rotulo-negro mt-4 text-rotulo-sm text-tinta-900">Agregar producto</h1>
+  <p class="mt-1 max-w-lg text-sm text-tinta-500">
+    Lo que escribas aquí es lo que ve el cliente en la ficha. Solo el nombre, el precio
+    y la categoría son obligatorios para publicarlo.
+  </p>
+
+  <div class="mt-8">
+    <ProductForm client:load categorias={categorias} />
+  </div>
+</AdminLayout>

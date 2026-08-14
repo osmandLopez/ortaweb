@@ -1,0 +1,96 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { db } from '@/lib/db';
+import { precio } from '@/lib/money';
+
+const productos = await db.listarProductos();
+const pedidos = await db.listarPedidos();
+const categorias = await db.listarCategorias();
+
+const cobrado = pedidos.reduce((n, p) => n + p.pagado, 0);
+const apartados = pedidos.filter((p) => p.esApartado);
+const porCobrar = apartados.reduce((n, p) => n + (p.total - p.pagado), 0);
+const agotados = productos.filter((p) => p.stock === 0);
+const bajos = productos.filter((p) => p.stock > 0 && p.stock <= 5);
+
+const metricas = [
+  { titulo: 'Cobrado', valor: precio(cobrado), detalle: `${pedidos.length} pedidos` },
+  { titulo: 'Saldo de apartados', valor: precio(porCobrar), detalle: `${apartados.length} activos`, acento: 'text-mistico-700' },
+  { titulo: 'En catálogo', valor: String(productos.length), detalle: `${categorias.length} categorías` },
+  { titulo: 'Sin existencia', valor: String(agotados.length), detalle: `${bajos.length} con stock bajo`, acento: agotados.length ? 'text-red-600' : undefined },
+];
+---
+
+<AdminLayout titulo="Resumen" activo="/admin">
+  <h1 class="rotulo rotulo-negro text-rotulo-sm text-tinta-900">Resumen</h1>
+
+  <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {metricas.map((m) => (
+      <div class="nota-seccion">
+        <p class="etiqueta text-tinta-400">{m.titulo}</p>
+        <p class:list={['mt-3 font-nota text-2xl tabular-nums', m.acento ?? 'text-tinta-900']}>{m.valor}</p>
+        <p class="mt-1 font-nota text-[11px] text-tinta-500">{m.detalle}</p>
+      </div>
+    ))}
+  </div>
+
+  <div class="mt-8 grid gap-6 lg:grid-cols-2">
+    <section class="nota-seccion">
+      <div class="flex items-center justify-between">
+        <h2 class="etiqueta text-tinta-400">Inventario que necesita atención</h2>
+        <a href="/admin/productos" class="etiqueta text-cielo-600 underline">Ver todo</a>
+      </div>
+
+      {[...agotados, ...bajos].length === 0 ? (
+        <p class="mt-4 text-sm text-tinta-500">Todo el catálogo tiene existencia suficiente.</p>
+      ) : (
+        <ul class="mt-4 divide-y divide-tinta-200">
+          {[...agotados, ...bajos].map((p) => (
+            <li class="flex items-center justify-between gap-3 py-2.5">
+              <span class="min-w-0">
+                <span class="block truncate text-sm font-bold text-tinta-900">{p.nombre}</span>
+                <span class="font-nota text-[11px] text-tinta-400">{p.sku}</span>
+              </span>
+              <span class:list={['insignia shrink-0', p.stock === 0 ? 'bg-red-50 text-red-700' : 'bg-oro-100 text-oro-800']}>
+                {p.stock === 0 ? 'Agotado' : `Quedan ${p.stock}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    <section class="nota-seccion">
+      <div class="flex items-center justify-between">
+        <h2 class="etiqueta text-tinta-400">Últimos pedidos</h2>
+        <a href="/admin/pedidos" class="etiqueta text-cielo-600 underline">Ver todo</a>
+      </div>
+
+      {pedidos.length === 0 ? (
+        <p class="mt-4 text-sm text-tinta-500">Todavía no hay pedidos. Aparecerán aquí en cuanto Stripe confirme el primer cobro.</p>
+      ) : (
+        <ul class="mt-4 divide-y divide-tinta-200">
+          {pedidos.slice(0, 6).map((p) => (
+            <li class="flex items-center justify-between gap-3 py-2.5">
+              <span>
+                <span class="block font-nota text-xs text-tinta-900">{p.folio}</span>
+                <span class="block text-xs text-tinta-500">{p.emailContacto}</span>
+              </span>
+              <span class="text-right">
+                <span class="block font-nota text-sm tabular-nums text-tinta-900">{precio(p.pagado)}</span>
+                <span class="block font-nota text-[10px] uppercase tracking-[0.12em] text-tinta-400">
+                  {p.estado.replace(/_/g, ' ')}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  </div>
+
+  <div class="mt-8 flex flex-wrap gap-3">
+    <a href="/admin/productos/nuevo" class="btn-primario">Agregar producto</a>
+    <a href="/admin/categorias" class="btn-linea">Gestionar categorías</a>
+  </div>
+</AdminLayout>

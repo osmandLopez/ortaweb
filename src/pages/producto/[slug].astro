@@ -1,0 +1,146 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ProductoImagen from '@/components/commerce/ProductoImagen.astro';
+import ApartadoTicket from '@/components/commerce/ApartadoTicket.astro';
+import ProductCard from '@/components/commerce/ProductCard.astro';
+import AddToCart from '@/components/islands/AddToCart';
+import { db } from '@/lib/db';
+import { calcularAnticipo, descuento, precio } from '@/lib/money';
+
+const { slug } = Astro.params;
+const producto = await db.obtenerProducto(slug!);
+if (!producto) return Astro.rewrite('/404');
+
+const categorias = await db.listarCategorias();
+const categoria = categorias.find((c) => c.id === producto.categoriaId);
+const madre = categoria?.padreId ? categorias.find((c) => c.id === categoria.padreId) : null;
+
+const relacionados = (await db.listarProductos({ categoriaSlug: (madre ?? categoria)?.slug, limite: 5 }))
+  .filter((p) => p.id !== producto.id)
+  .slice(0, 4);
+
+const rebaja = descuento(producto.precio, producto.precioAnterior);
+const anticipo = producto.apartable ? calcularAnticipo(producto.precio, producto.anticipoMinimo) : 0;
+const sucursales = await db.listarSucursales();
+---
+
+<BaseLayout titulo={producto.nombre} descripcion={producto.descripcion}>
+  <script
+    type="application/ld+json"
+    set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: producto.nombre,
+      description: producto.descripcion,
+      sku: producto.sku,
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: 'MXN',
+        price: (producto.precio / 100).toFixed(2),
+        availability: producto.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      },
+    })}
+  />
+
+  <div class="contenedor py-8">
+    <nav aria-label="Ruta" class="etiqueta flex flex-wrap items-center gap-2 text-tinta-500">
+      <a href="/tienda" class="hover:text-tinta-900">Tienda</a>
+      {categoria && (
+        <>
+          <span aria-hidden="true">/</span>
+          <a href={`/tienda/${categoria.slug}`} class="hover:text-tinta-900">{categoria.nombre}</a>
+        </>
+      )}
+    </nav>
+
+    <div class="mt-6 grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
+      <div class="grid gap-3 sm:grid-cols-2 lg:sticky lg:top-40 lg:self-start">
+        <ProductoImagen
+          src={producto.imagenes[0]}
+          alt={producto.nombre}
+          sku={producto.sku}
+          ratio="4 / 5"
+          loading="eager"
+          class="rounded-md sm:col-span-2"
+        >
+          {rebaja && <span class="insignia-temporada absolute left-3 top-3">−{rebaja}%</span>}
+        </ProductoImagen>
+        {producto.imagenes.slice(1, 3).map((img) => (
+          <ProductoImagen src={img} alt={producto.nombre} sku={producto.sku} ratio="1 / 1" class="rounded-md" />
+        ))}
+      </div>
+
+      <div>
+        <h1 class="rotulo text-rotulo-sm text-tinta-900">{producto.nombre}</h1>
+        <p class="mt-2 font-nota text-[11px] text-tinta-400">SKU {producto.sku}</p>
+
+        <div class="mt-5 flex flex-wrap items-baseline gap-3">
+          <p class="font-nota text-3xl tabular-nums text-tinta-900">{precio(producto.precio)}</p>
+          {producto.precioAnterior && (
+            <p class="font-nota text-base tabular-nums text-tinta-400 line-through">
+              {precio(producto.precioAnterior)}
+            </p>
+          )}
+        </div>
+
+        <p class="mt-5 max-w-prose leading-relaxed text-tinta-600">{producto.descripcion}</p>
+
+        <div class="mt-8">
+          <AddToCart
+            client:load
+            productoId={producto.id}
+            slug={producto.slug}
+            nombre={producto.nombre}
+            precioCentavos={producto.precio}
+            imagen={producto.imagenes[0] ?? ''}
+            stock={producto.stock}
+            apartable={producto.apartable}
+            anticipo={anticipo}
+          />
+        </div>
+
+        <ul class="mt-8 divide-y divide-tinta-200 border-y border-tinta-200">
+          <li class="flex items-start gap-4 py-4">
+            <span class="etiqueta w-24 shrink-0 pt-0.5 text-tinta-400">Envío</span>
+            <span class="text-sm text-tinta-700">
+              Cotización nacional por código postal en el checkout. Gratis a partir de $999.
+            </span>
+          </li>
+          <li class="flex items-start gap-4 py-4">
+            <span class="etiqueta w-24 shrink-0 pt-0.5 text-tinta-400">Recoger</span>
+            <span class="text-sm text-tinta-700">
+              {sucursales.map((s) => s.nombre).join(' · ')}
+            </span>
+          </li>
+          {producto.apartable && (
+            <li class="flex items-start gap-4 py-4">
+              <span class="etiqueta w-24 shrink-0 pt-0.5 text-mistico-600">Apartado</span>
+              <span class="text-sm text-tinta-700">
+                Desde {precio(anticipo)} de anticipo · {producto.plazoSemanas} semanas para liquidar
+              </span>
+            </li>
+          )}
+        </ul>
+
+        {producto.apartable && (
+          <div class="mt-8">
+            <ApartadoTicket producto={producto} folio={`ON-${producto.sku.slice(-6)}`} fondo="#FFFFFF">
+              <a slot="accion" href="#contenido" class="btn-apartado mt-4 w-full">
+                Usa el botón “Apartarlo” de arriba
+              </a>
+            </ApartadoTicket>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {relacionados.length > 0 && (
+      <section class="mt-20">
+        <h2 class="rotulo text-rotulo-sm text-tinta-900">También en {(madre ?? categoria)?.nombre}</h2>
+        <div class="mt-8 grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4">
+          {relacionados.map((p) => <ProductCard producto={p} />)}
+        </div>
+      </section>
+    )}
+  </div>
+</BaseLayout>
