@@ -9,13 +9,15 @@ const { categorias, activo } = Astro.props;
 
 /* El menú principal está fijado por la marca. Las categorías administrables
    cuelgan de "Tienda" como submenú, para que el panel pueda crecer el catálogo
-   sin que nadie tenga que tocar la navegación. */
+   sin que nadie tenga que tocar la navegación.
+
+   Solo cuatro entradas, a propósito: temporada ya tiene su propia tarjeta y su
+   franja dorada en el inicio, así que repetirla aquí era ruido. Se llega igual
+   por /temporada, que sigue viva. */
 const principal = [
   { href: '/', texto: 'Inicio', punto: null },
   { href: '/tienda', texto: 'Tienda', punto: null },
-  { href: '/temporada', texto: 'Ventas de temporada', punto: 'bg-oro-500' },
   { href: '/apartados', texto: 'Apartados', punto: 'bg-mistico-500' },
-  { href: '/nosotros', texto: 'Sobre nosotros', punto: null },
   { href: '/contacto', texto: 'Contacto', punto: null },
 ];
 
@@ -25,23 +27,28 @@ const hijasDe = (id: string) => categorias.filter((c) => c.padreId === id && c.a
 
 <nav aria-label="Navegación principal" class="border-t border-tinta-200 bg-white">
   <div class="contenedor">
-    <ul class="hidden items-stretch gap-1 lg:flex">
+    <ul class="hidden items-stretch justify-center gap-2 lg:flex">
       {principal.map((item) => (
         <li class="group relative">
           <a
             href={item.href}
             aria-current={activo === item.href ? 'page' : undefined}
             class:list={[
-              'etiqueta flex items-center gap-2 px-4 py-3.5 text-tinta-700 transition hover:text-tinta-900',
+              'etiqueta flex items-center gap-2 px-5 py-4 text-tinta-500 transition-colors duration-200 hover:text-tinta-900',
               activo === item.href && 'text-tinta-900',
             ]}
           >
             {item.punto && <span class:list={['h-1.5 w-1.5 rounded-full', item.punto]} aria-hidden="true"></span>}
             {item.texto}
           </a>
-          {activo === item.href && (
-            <span class="absolute inset-x-3 bottom-0 h-0.5 bg-tinta-900" aria-hidden="true"></span>
-          )}
+          {/* Un solo subrayado para activo y hover: crece desde la izquierda. */}
+          <span
+            class:list={[
+              'pointer-events-none absolute inset-x-4 bottom-0 h-0.5 origin-left bg-tinta-900 transition-transform duration-300',
+              activo === item.href ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100',
+            ]}
+            aria-hidden="true"
+          ></span>
 
           {item.href === '/tienda' && (
             <div class="invisible absolute left-0 top-full z-40 w-[42rem] border border-tinta-200 bg-white p-6 opacity-0 shadow-alzada transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">

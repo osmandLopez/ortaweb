@@ -1,20 +1,22 @@
 ---
 import { Image } from 'astro:assets';
-import logo from '@/assets/logo-orta.png';
+import logo from '@/assets/inicio.png';
 
 /*
  * Logotipo de la marca.
  *
- * El archivo de origen no trae canal alfa: el cuadriculado que se ve alrededor
- * son píxeles del PNG, no transparencia. Está así a petición expresa, hasta que
- * llegue una exportación con alfa real. Cuando llegue, se reemplaza
- * src/assets/logo-orta.png y no hay que tocar nada más.
+ * Ojo con el archivo de origen: NO es logo-orta.png. Ese nombre engaña, porque
+ * lo que contiene es el rótulo de «Artículos de temporada», que es justo para
+ * lo que lo usa src/pages/temporada.astro. Mientras el logo salía de ahí, el
+ * header enseñaba el rótulo de temporada en lugar de la marca.
+ *
+ * El logotipo real de Orta Novedades es inicio.png, y con alfa de verdad.
  *
  * astro:assets genera webp/avif y los tamaños según `width`, así que la página
  * no arrastra el peso del original.
  */
 interface Props {
-  /** Alto en pantalla; el ancho sale de la proporción 1.36:1 */
+  /** Alto en pantalla; el ancho sale de la proporción 1.5:1 */
   alto?: 'sm' | 'md' | 'lg';
   prioridad?: boolean;
   class?: string;
@@ -24,9 +26,9 @@ const { alto = 'md', prioridad = false, class: clase = '' } = Astro.props;
 
 // Se pide al doble del tamaño de pantalla para que se vea nítido en retina.
 const MEDIDAS = {
-  sm: { render: 176, clases: 'h-10 w-auto' },
-  md: { render: 224, clases: 'h-12 w-auto sm:h-14' },
-  lg: { render: 400, clases: 'h-24 w-auto sm:h-32' },
+  sm: { render: 160, clases: 'h-8 w-auto' },
+  md: { render: 200, clases: 'h-10 w-auto sm:h-12' },
+  lg: { render: 400, clases: 'h-20 w-auto sm:h-24' },
 } as const;
 
 const { render, clases } = MEDIDAS[alto];
@@ -36,7 +38,7 @@ const { render, clases } = MEDIDAS[alto];
   src={logo}
   alt="Orta Novedades"
   width={render}
-  height={Math.round(render / 1.36)}
+  height={Math.round(render / 1.5)}
   loading={prioridad ? 'eager' : 'lazy'}
   decoding={prioridad ? 'sync' : 'async'}
   class:list={[clases, clase]}

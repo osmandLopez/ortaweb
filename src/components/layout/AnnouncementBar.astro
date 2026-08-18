@@ -3,6 +3,10 @@
  * Cinta del mostrador. Repite los tres avisos que la tienda física pone en el
  * cristal. El contenido se duplica para que el desplazamiento no tenga costura;
  * la copia duplicada queda oculta a lectores de pantalla.
+ *
+ * El fondo es cielo-700 y no cielo-500: sobre el 500 el texto blanco de 11px se
+ * queda en 2.9:1 de contraste, por debajo del mínimo AA (4.5:1). El 700 sube a
+ * 5.9:1 sin salirse de la escala azul de la marca.
  */
 const avisos = [
   'Envío gratis en compras mayores a $999',
@@ -11,25 +15,25 @@ const avisos = [
 ];
 ---
 
-<div class="bg-cielo-500 text-white">
-  <div class="flex overflow-hidden py-2">
+<div class="bg-cielo-700 text-white">
+  <div class="flex overflow-hidden py-2.5">
     <ul
-      class="flex shrink-0 animate-cinta items-center gap-10 whitespace-nowrap pr-10 motion-reduce:animate-none"
+      class="flex shrink-0 animate-cinta items-center whitespace-nowrap motion-reduce:animate-none"
       aria-label="Avisos de la tienda"
     >
       {avisos.map((a) => (
-        <li class="etiqueta flex items-center gap-3">
-          <span aria-hidden="true" class="text-cielo-200">◆</span>{a}
+        <li class="etiqueta flex items-center gap-3 px-6 sm:px-8">
+          <span aria-hidden="true" class="text-cielo-300">◆</span>{a}
         </li>
       ))}
     </ul>
     <ul
-      class="flex shrink-0 animate-cinta items-center gap-10 whitespace-nowrap pr-10 motion-reduce:hidden"
+      class="flex shrink-0 animate-cinta items-center whitespace-nowrap motion-reduce:hidden"
       aria-hidden="true"
     >
       {avisos.map((a) => (
-        <li class="etiqueta flex items-center gap-3">
-          <span class="text-cielo-200">◆</span>{a}
+        <li class="etiqueta flex items-center gap-3 px-6 sm:px-8">
+          <span class="text-cielo-300">◆</span>{a}
         </li>
       ))}
     </ul>

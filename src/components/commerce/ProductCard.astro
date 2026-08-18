@@ -22,7 +22,7 @@ const pocas = !agotado && producto.stock <= 5;
     alt={producto.nombre}
     sku={producto.sku}
     loading={loading}
-    class="rounded-md transition group-hover:border-tinta-900"
+    class="rounded-md transition duration-200 group-hover:-translate-y-1 group-hover:border-tinta-900 group-hover:shadow-alzada"
   >
     <div class="absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
       {rebaja && <span class="insignia-temporada">−{rebaja}%</span>}
