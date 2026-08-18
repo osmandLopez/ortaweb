@@ -1,16 +1,16 @@
 ---
 import { Image } from 'astro:assets';
-import logo from '@/assets/inicio.png';
+import logo from '@/assets/inicio.webp';
 
 /*
  * Logotipo de la marca.
  *
- * Ojo con el archivo de origen: NO es logo-orta.png. Ese nombre engaña, porque
+ * Ojo con el archivo de origen: NO es logo-orta.webp. Ese nombre engaña, porque
  * lo que contiene es el rótulo de «Artículos de temporada», que es justo para
  * lo que lo usa src/pages/temporada.astro. Mientras el logo salía de ahí, el
  * header enseñaba el rótulo de temporada en lugar de la marca.
  *
- * El logotipo real de Orta Novedades es inicio.png, y con alfa de verdad.
+ * El logotipo real de Orta Novedades es inicio.webp, y con alfa de verdad.
  *
  * astro:assets genera webp/avif y los tamaños según `width`, así que la página
  * no arrastra el peso del original.
