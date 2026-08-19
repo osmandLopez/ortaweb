@@ -24,21 +24,20 @@ npx tsx scripts/hacer-admin.ts tu@correo.mx
 |---|---|---|---|
 | Acción | `cielo` | `#00A3E0` | Botones primarios, enlaces, foco, barra de progreso |
 | Temporada | `oro` | `#EAB308` | Badges de rebaja, franja de temporada |
-| Apartado | `mistico` | `#A855F7` | Anticipos, saldos, casillas de abono |
+| Acento | `mistico` | `#A855F7` | Acento de categorías especiales |
 | Texto | `tinta` | `#18181B` | Encabezados, cuerpo, footer, panel |
 | Superficie | `papel` | `#FFFFFF` | Tarjetas y contenedores |
 
-Cada color tiene un trabajo y no se intercambian: si algo es morado, es un apartado.
+Cada color tiene un trabajo y no se intercambian.
 
 **Tipografía.** *Archivo Variable* en eje ancho expandido (`.rotulo`) para títulos,
-lógica de rótulo pintado; *Karla* para cuerpo; *Space Mono* para folios, precios de
-abono, SKU y contadores — el monoespaciado aquí es funcional, son cifras de nota.
+lógica de rótulo pintado; *Karla* para cuerpo; *Space Mono* para folios, precios,
+SKU y contadores — el monoespaciado aquí es funcional, son cifras de nota.
 
-**Elemento firma: la Nota de Apartado** (`src/components/commerce/ApartadoTicket.astro`).
-Recibo con muesca troquelada, guías punteadas, folio y medidor de abonos como casillas
-selladas. Aparece en el hero, en `/apartados`, en la ficha de producto y en la
-confirmación de pago. Es la única pieza maximalista del sitio; el resto se mantiene
-callado a propósito.
+**Elemento firma: la nota del mostrador** (`.nota` y `.nota-corte` en
+`src/styles/global.css`). Recibo con muesca troquelada, guías punteadas y folio.
+Aparece en la confirmación de pago. Es la única pieza maximalista del sitio; el
+resto se mantiene callado a propósito.
 
 ---
 
@@ -61,8 +60,9 @@ orta/
     │
     ├── components/
     │   ├── layout/           # AnnouncementBar · Header · Navbar · Footer
-    │   ├── commerce/         # ProductCard · Catalogo · ProductoImagen · ApartadoTicket
-    │   ├── islands/          # Preact hidratado: CartButton, CartDrawer, AddToCart, Checkout
+    │   ├── commerce/         # ProductCard · Catalogo · ProductoImagen
+    │   ├── islands/          # Preact hidratado: CartButton, CartDrawer, AddToCart,
+    │   │                     #   Checkout, FormularioEntrar, FormularioRestablecer
     │   └── admin/            # ProductForm · CategoryForm
     │
     ├── stores/
@@ -74,23 +74,25 @@ orta/
     │   ├── repositorio.ts    # Interfaz Repositorio + ErrorDeDatos
     │   ├── sqlite.ts         # Implementación sobre libSQL
     │   ├── db.ts             # Punto de entrada: elige la implementación
-    │   ├── auth.ts           # Better Auth: adaptador, rol y sesiones
-    │   ├── auth-cliente.ts   # Cliente de auth para las islas
+    │   ├── auth.ts           # Better Auth: adaptador, rol, sesiones y correos
+    │   ├── auth-cliente.ts   # Cliente de auth + validaciones compartidas
+    │   ├── correo.ts         # Envío con Resend y plantillas de correo
+    │   ├── entorno.ts        # Variables, URL canónica y orígenes confiables
     │   ├── stripe.ts         # SDK, line_items y creación de sesión de Checkout
     │   ├── shipping.ts       # Cotización nacional por código postal
     │   ├── session.ts        # Lectura de sesión y rutas protegidas
-    │   └── money.ts          # Formato MXN, anticipos, folios
+    │   └── money.ts          # Formato MXN y folios
     │
     ├── data/seed.ts          # Catálogo inicial de demostración
-    ├── styles/global.css     # Capa base, componentes de marca (.nota, .guia, .abono)
+    ├── styles/global.css     # Capa base, componentes de marca (.nota, .guia)
     │
     └── pages/
         ├── index.astro
         ├── tienda/index.astro · tienda/[categoria].astro
         ├── producto/[slug].astro
-        ├── temporada.astro · apartados.astro
+        ├── temporada.astro
         ├── checkout/index.astro · checkout/exito.astro
-        ├── entrar.astro · 404.astro
+        ├── entrar.astro · verificar.astro · restablecer.astro · 404.astro
         ├── admin/index.astro · admin/categorias.astro
         │   └── admin/productos/index.astro · nuevo.astro · [id].astro
         └── api/
@@ -140,7 +142,8 @@ prueba no es motivo para echar a todos de su sesión.
 Tres invariantes que la capa sostiene:
 
 - **El cobro y el descuento de inventario ocurren en una sola transacción**, y solo
-  en el primer pago: un abono posterior de un apartado no vuelve a descontar.
+  la primera vez que se confirma el pedido: un evento repetido de Stripe no vuelve a
+  descontar ni a mandar otro correo de confirmación.
 - **Los webhooks son idempotentes.** `eventos_stripe` guarda cada id de evento; un
   reintento de Stripe se reconoce y no repite el efecto.
 - **Un producto que ya aparece en pedidos no se borra**, se oculta. Borrarlo dejaría
@@ -159,8 +162,6 @@ la solución es reservar la pieza al crear la sesión de Stripe y liberarla al e
 | Catálogo, búsqueda, filtros | ✓ | ✓ | ✓ |
 | Carrito y checkout | ✓ | ✓ | ✓ |
 | Historial y rastreo de pedidos | — | ✓ | ✓ |
-| Apartados y abonos en línea | — | ✓ | ✓ |
-| Lista de deseos y direcciones | — | ✓ | ✓ |
 | Panel, productos, categorías, métricas | — | — | ✓ |
 
 `src/middleware.ts` aplica las reglas antes de renderizar. Las páginas devuelven un
@@ -228,13 +229,6 @@ Tres reglas que sostienen el flujo:
    inventario es el webhook ([src/pages/api/webhooks/stripe.ts](src/pages/api/webhooks/stripe.ts)),
    con la firma verificada.
 
-### Apartados
-
-Un ítem en modo `apartado` genera un `line_item` por el **anticipo**, no por el precio
-completo, con el saldo anotado en la descripción. El pedido queda en
-`apartado_activo` y cada abono posterior es su propio PaymentIntent contra el mismo
-folio (tabla `abonos` en [db/schema.sql](db/schema.sql)).
-
 ### Probar en local
 
 ```bash
@@ -248,13 +242,13 @@ Copia el `whsec_…` que imprime a `STRIPE_WEBHOOK_SECRET`. Tarjeta de prueba:
 
 ## Antes de publicar
 
-- [ ] Conectar un proveedor de correo (Resend, Postmark) para que funcionen el
-      restablecer contraseña y la verificación. Hoy `forgetPassword` responde bien
-      pero el correo no sale de ninguna parte.
+- [ ] Definir `RESEND_API_KEY` y `CORREO_REMITENTE` con un dominio verificado en
+      Resend. Sin ellas no salen los correos y la verificación de cuenta queda
+      desactivada (el sitio lo avisa en consola al arrancar).
 - [ ] Crear una base en Turso y apuntar `DATABASE_URL` ahí.
 - [ ] Registrar el webhook de producción y verificar el dominio para Apple Pay.
 - [ ] Cambiar la cotización de `src/lib/shipping.ts` por la API de la paquetería.
-- [ ] Crear las rutas que aún enlazan a 404: `/nosotros`, `/contacto`,
-      `/cuenta/pedidos`, `/cuenta/apartados`, `/cuenta/deseos`, `/restablecer`,
-      `/admin/pedidos`, `/admin/apartados` y las de ayuda y legales del footer.
+- [ ] Crear las rutas que aún enlazan a 404: `/nosotros`, `/envios`,
+      `/devoluciones`, `/privacidad`, `/terminos`, `/tienda/novedades`,
+      `/admin/pedidos` y el endpoint `/api/boletin` del footer.
 - [ ] Subida real de imágenes en el panel (hoy el formulario acepta URLs).

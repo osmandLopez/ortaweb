@@ -35,12 +35,6 @@ export interface Producto {
   stock: number;
   categoriaId: string;
   imagenes: string[];
-  /** admite reserva con anticipo */
-  apartable: boolean;
-  /** porcentaje mínimo de anticipo, 0–100. Solo aplica si apartable */
-  anticipoMinimo: number;
-  /** semanas para liquidar el apartado */
-  plazoSemanas: number;
   temporada: boolean;
   destacado: boolean;
   activo: boolean;
@@ -54,9 +48,6 @@ export interface ItemCarrito {
   precio: number;
   imagen: string;
   cantidad: number;
-  /** 'compra' cobra el total; 'apartado' cobra solo el anticipo */
-  modo: 'compra' | 'apartado';
-  anticipo: number;
 }
 
 export type MetodoEntrega = 'envio' | 'pickup';
@@ -81,21 +72,11 @@ export interface OpcionEnvio {
 export type EstadoPedido =
   | 'pendiente_pago'
   | 'pagado'
-  | 'apartado_activo'
-  | 'apartado_liquidado'
   | 'en_preparacion'
   | 'enviado'
   | 'listo_para_recoger'
   | 'entregado'
   | 'cancelado';
-
-export interface Abono {
-  id: string;
-  pedidoId: string;
-  monto: number;
-  fecha: string;
-  stripePaymentIntentId: string | null;
-}
 
 export interface Pedido {
   id: string;
@@ -107,15 +88,16 @@ export interface Pedido {
   subtotal: number;
   envio: number;
   total: number;
-  /** suma de abonos cobrados; en compras normales iguala a total */
+  /** lo que Stripe confirmó cobrado. Un pedido pagado iguala a total */
   pagado: number;
   metodoEntrega: MetodoEntrega;
   sucursalId: string | null;
   direccion: Direccion | null;
   estado: EstadoPedido;
-  esApartado: boolean;
-  venceEn: string | null;
   stripeSessionId: string | null;
+  stripePaymentIntentId: string | null;
+  /** cuándo se confirmó el cobro. null mientras el pedido siga pendiente */
+  pagadoEn: string | null;
   creadoEn: string;
 }
 

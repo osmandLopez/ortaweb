@@ -27,10 +27,18 @@ export interface Repositorio {
   asignarRol(email: string, rol: 'admin' | 'cliente'): Promise<boolean>;
 
   /**
-   * Registra el cobro y descuenta inventario en una sola transacción.
-   * Devuelve null si la sesión no corresponde a ningún pedido.
+   * Confirma el cobro y descuenta inventario en una sola transacción.
+   *
+   * Devuelve null si la sesión no corresponde a ningún pedido, y `primeraVez`
+   * en false si el pedido ya estaba pagado: así el webhook sabe que no debe
+   * repetir los efectos (correo de confirmación, inventario) cuando Stripe
+   * reintenta o manda dos eventos del mismo cobro.
    */
-  marcarPagado(sessionId: string, monto: number, paymentIntentId?: string | null): Promise<Pedido | null>;
+  marcarPagado(
+    sessionId: string,
+    monto: number,
+    paymentIntentId?: string | null,
+  ): Promise<{ pedido: Pedido; primeraVez: boolean } | null>;
 
   /**
    * Idempotencia de webhooks. Devuelve true la primera vez que se ve un evento
@@ -42,7 +50,6 @@ export interface Repositorio {
 export interface FiltroProductos {
   categoriaSlug?: string;
   temporada?: boolean;
-  apartable?: boolean;
   destacado?: boolean;
   busqueda?: string;
   orden?: 'reciente' | 'precio-asc' | 'precio-desc';

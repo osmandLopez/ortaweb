@@ -19,11 +19,6 @@ export function descuento(precio: number, anterior: number | null): number | nul
   return Math.round(((anterior - precio) / anterior) * 100);
 }
 
-/** Anticipo mínimo en centavos, redondeado a peso. */
-export function calcularAnticipo(total: number, porcentaje: number): number {
-  return Math.ceil((total * porcentaje) / 100 / 100) * 100;
-}
-
 /** Folio de nota: ON-A4F2K9 */
 export function generarFolio(prefijo = 'ON'): string {
   const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

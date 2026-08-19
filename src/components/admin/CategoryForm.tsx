@@ -8,7 +8,7 @@ interface Props {
 const ACENTOS = [
   { valor: 'cielo', nombre: 'Cielo', hex: '#00A3E0', uso: 'Novedades y catálogo general' },
   { valor: 'oro', nombre: 'Oro', hex: '#EAB308', uso: 'Temporada y ofertas' },
-  { valor: 'mistico', nombre: 'Místico', hex: '#A855F7', uso: 'Apartados y reservas' },
+  { valor: 'mistico', nombre: 'Místico', hex: '#A855F7', uso: 'Colecciones especiales' },
   { valor: 'tinta', nombre: 'Tinta', hex: '#18181B', uso: 'Categorías permanentes' },
 ] as const;
 

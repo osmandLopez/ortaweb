@@ -43,7 +43,6 @@ const nombreCategoria = (id: string) => categorias.find((c) => c.id === id)?.nom
             <td class="px-4 py-3">
               <span class="flex flex-wrap gap-1.5">
                 {p.temporada && <span class="insignia-temporada">Temporada</span>}
-                {p.apartable && <span class="insignia-apartado">Apartable</span>}
                 {!p.activo && <span class="insignia-agotado">Oculto</span>}
               </span>
             </td>

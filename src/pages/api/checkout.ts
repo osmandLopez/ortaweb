@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { crearSesionCheckout } from '@/lib/stripe';
 import { cotizar } from '@/lib/shipping';
-import { calcularAnticipo, generarFolio } from '@/lib/money';
+import { generarFolio } from '@/lib/money';
 import { sitioUrl } from '@/lib/entorno';
 import type { ItemCarrito, Pedido } from '@/lib/types';
 
@@ -13,7 +13,6 @@ const schema = z.object({
   items: z.array(z.object({
     productoId: z.string(),
     cantidad: z.number().int().positive().max(20),
-    modo: z.enum(['compra', 'apartado']),
   })).min(1),
   email: z.string().email('Necesitamos un correo para enviarte la confirmación.'),
   metodoEntrega: z.enum(['envio', 'pickup']),
@@ -39,41 +38,48 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     if (p.stock < linea.cantidad) {
       return json({ error: `Solo quedan ${p.stock} de ${p.nombre}. Ajusta la cantidad.` }, 409);
     }
-    if (linea.modo === 'apartado' && !p.apartable) {
-      return json({ error: `${p.nombre} no se puede apartar.` }, 409);
-    }
     items.push({
       productoId: p.id, slug: p.slug, nombre: p.nombre, precio: p.precio,
-      imagen: p.imagenes[0] ?? '', cantidad: linea.cantidad, modo: linea.modo,
-      anticipo: p.apartable ? calcularAnticipo(p.precio, p.anticipoMinimo) : p.precio,
+      imagen: p.imagenes[0] ?? '', cantidad: linea.cantidad,
     });
   }
 
-  const mercancia = items.reduce((n, i) => n + i.precio * i.cantidad, 0);
-  const aCobrar = items.reduce((n, i) => n + (i.modo === 'apartado' ? i.anticipo : i.precio) * i.cantidad, 0);
+  const subtotal = items.reduce((n, i) => n + i.precio * i.cantidad, 0);
 
   let envio = null;
   if (datos.metodoEntrega === 'envio') {
     if (!datos.cp) return json({ error: 'Escribe tu código postal para cotizar el envío.' }, 422);
-    const { opciones } = cotizar(datos.cp, mercancia);
+    /* La tarifa también se recalcula en el servidor: el navegador manda cuál
+       eligió, no cuánto cuesta. */
+    const { opciones } = cotizar(datos.cp, subtotal);
     envio = opciones.find((o) => o.id === datos.opcionEnvioId) ?? opciones[0]!;
   } else if (!datos.sucursalId) {
     return json({ error: 'Elige la sucursal donde vas a recoger.' }, 422);
   }
 
-  const esApartado = items.some((i) => i.modo === 'apartado');
   const folio = generarFolio();
+  const costoEnvio = envio?.costo ?? 0;
+  const total = subtotal + costoEnvio;
 
-  const sesion = await crearSesionCheckout({
-    items,
-    envio,
-    metodoEntrega: datos.metodoEntrega,
-    sucursalId: datos.sucursalId ?? null,
-    email: datos.email,
-    folio,
-    usuarioId: locals.usuario?.id ?? null,
-    origen: sitioUrl() || url.origin,
-  });
+  /* Si Stripe no responde (o falta la clave), el cliente tiene que enterarse con
+     una frase entendible en vez de un 500 con cuerpo vacío. El detalle queda en
+     el log del servidor, que es donde sirve. */
+  let sesion;
+  try {
+    sesion = await crearSesionCheckout({
+      items,
+      envio,
+      metodoEntrega: datos.metodoEntrega,
+      sucursalId: datos.sucursalId ?? null,
+      email: datos.email,
+      folio,
+      usuarioId: locals.usuario?.id ?? null,
+      origen: sitioUrl() || url.origin,
+    });
+  } catch (e) {
+    console.error(`[orta] No se pudo abrir la sesión de pago (${folio}):`, (e as Error).message);
+    return json({ error: 'No pudimos abrir el pago ahora mismo. Inténtalo en un momento.' }, 502);
+  }
 
   /* El pedido se guarda como pendiente ANTES de mandar al cliente a Stripe.
      El webhook es quien lo confirma; así ningún cobro queda sin pedido. */
@@ -83,20 +89,20 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     usuarioId: locals.usuario?.id ?? null,
     emailContacto: datos.email,
     items,
-    subtotal: mercancia,
-    envio: envio?.costo ?? 0,
-    total: mercancia + (envio?.costo ?? 0),
+    subtotal,
+    envio: costoEnvio,
+    total,
     pagado: 0,
     metodoEntrega: datos.metodoEntrega,
     sucursalId: datos.sucursalId ?? null,
     direccion: null,
     estado: 'pendiente_pago',
-    esApartado,
-    venceEn: esApartado ? new Date(Date.now() + 56 * 864e5).toISOString() : null,
     stripeSessionId: sesion.id,
+    stripePaymentIntentId: null,
+    pagadoEn: null,
     creadoEn: new Date().toISOString(),
   };
   await db.crearPedido(pedido);
 
-  return json({ url: sesion.url, folio, aCobrar: aCobrar + (envio?.costo ?? 0) });
+  return json({ url: sesion.url, folio, total });
 };

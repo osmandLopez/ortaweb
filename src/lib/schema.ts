@@ -123,9 +123,6 @@ export const productos = sqliteTable(
       .notNull()
       .references(() => categorias.id),
     imagenes: text('imagenes').notNull().default('[]'), // JSON: string[]
-    apartable: integer('apartable', { mode: 'boolean' }).notNull().default(false),
-    anticipoMinimo: integer('anticipo_minimo').notNull().default(0),
-    plazoSemanas: integer('plazo_semanas').notNull().default(0),
     temporada: integer('temporada', { mode: 'boolean' }).notNull().default(false),
     destacado: integer('destacado', { mode: 'boolean' }).notNull().default(false),
     activo: integer('activo', { mode: 'boolean' }).notNull().default(true),
@@ -136,7 +133,6 @@ export const productos = sqliteTable(
     uniqueIndex('productos_sku_idx').on(t.sku),
     index('productos_categoria_idx').on(t.categoriaId),
     index('productos_temporada_idx').on(t.temporada),
-    index('productos_apartable_idx').on(t.apartable),
   ],
 );
 
@@ -180,20 +176,21 @@ export const pedidos = sqliteTable(
     direccionId: text('direccion_id').references(() => direcciones.id),
     estado: text('estado', {
       enum: [
-        'pendiente_pago', 'pagado', 'apartado_activo', 'apartado_liquidado',
+        'pendiente_pago', 'pagado',
         'en_preparacion', 'enviado', 'listo_para_recoger', 'entregado', 'cancelado',
       ],
     }).notNull().default('pendiente_pago'),
-    esApartado: integer('es_apartado', { mode: 'boolean' }).notNull().default(false),
-    venceEn: text('vence_en'),
     stripeSessionId: text('stripe_session_id'),
+    // Referencia del cobro en Stripe: es lo que se busca en el panel para
+    // conciliar o reembolsar.
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    pagadoEn: text('pagado_en'),
     creadoEn: text('creado_en').notNull(),
   },
   (t) => [
     uniqueIndex('pedidos_folio_idx').on(t.folio),
     uniqueIndex('pedidos_sesion_idx').on(t.stripeSessionId),
     index('pedidos_usuario_idx').on(t.usuarioId, t.creadoEn),
-    index('pedidos_vencimiento_idx').on(t.venceEn),
   ],
 );
 
@@ -211,26 +208,10 @@ export const pedidoItems = sqliteTable(
     // nombre y precio se congelan: el catálogo cambia, la nota del cliente no.
     nombre: text('nombre').notNull(),
     precio: integer('precio').notNull(),
-    anticipo: integer('anticipo').notNull().default(0),
     imagen: text('imagen').notNull().default(''),
     cantidad: integer('cantidad').notNull(),
-    modo: text('modo', { enum: ['compra', 'apartado'] }).notNull(),
   },
   (t) => [index('pedido_items_pedido_idx').on(t.pedidoId)],
-);
-
-export const abonos = sqliteTable(
-  'abonos',
-  {
-    id: text('id').primaryKey(),
-    pedidoId: text('pedido_id')
-      .notNull()
-      .references(() => pedidos.id, { onDelete: 'cascade' }),
-    monto: integer('monto').notNull(),
-    stripePaymentIntentId: text('stripe_payment_intent_id'),
-    fecha: text('fecha').notNull(),
-  },
-  (t) => [index('abonos_pedido_idx').on(t.pedidoId)],
 );
 
 export const listaDeseos = sqliteTable(

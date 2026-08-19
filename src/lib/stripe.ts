@@ -24,7 +24,8 @@ export function stripeCliente(): Stripe {
   }
 
   cliente = new Stripe(clave, {
-    apiVersion: '2024-12-18.acacia',
+    // Fijada a propósito: la versión que espera el SDK instalado (stripe 17.7).
+    apiVersion: '2025-02-24.acacia',
     appInfo: { name: 'Orta Novedades', version: '0.1.0' },
   });
   return cliente;
@@ -35,29 +36,21 @@ export const MONEDA = 'mxn';
 /**
  * Convierte el carrito en line_items de Stripe.
  *
- * Regla del negocio: un ítem en modo `apartado` cobra únicamente el anticipo en
- * esta sesión. El resto se liquida con abonos posteriores, cada uno su propio
- * PaymentIntent contra el mismo pedido.
+ * Los importes que llegan aquí ya vienen releídos de la base en /api/checkout:
+ * nada de lo que mande el navegador entra en el cobro.
  */
 export function lineItems(items: ItemCarrito[]): Stripe.Checkout.SessionCreateParams.LineItem[] {
-  return items.map((item) => {
-    const esApartado = item.modo === 'apartado';
-    const unitario = esApartado ? item.anticipo : item.precio;
-    return {
-      quantity: item.cantidad,
-      price_data: {
-        currency: MONEDA,
-        unit_amount: unitario,
-        product_data: {
-          name: esApartado ? `Apartado · ${item.nombre}` : item.nombre,
-          description: esApartado
-            ? `Anticipo. Saldo por liquidar: ${((item.precio - item.anticipo) / 100).toFixed(2)} MXN`
-            : undefined,
-          metadata: { producto_id: item.productoId, modo: item.modo },
-        },
+  return items.map((item) => ({
+    quantity: item.cantidad,
+    price_data: {
+      currency: MONEDA,
+      unit_amount: item.precio,
+      product_data: {
+        name: item.nombre,
+        metadata: { producto_id: item.productoId },
       },
-    };
-  });
+    },
+  }));
 }
 
 export function lineItemEnvio(opcion: OpcionEnvio): Stripe.Checkout.SessionCreateParams.LineItem {
@@ -83,15 +76,16 @@ export interface DatosSesion {
 }
 
 export function crearSesionCheckout(datos: DatosSesion) {
-  const contieneApartado = datos.items.some((i) => i.modo === 'apartado');
   const items = [...lineItems(datos.items)];
   if (datos.envio && datos.envio.costo > 0) items.push(lineItemEnvio(datos.envio));
 
   return stripeCliente().checkout.sessions.create({
     mode: 'payment',
-    // Tarjeta cubre crédito y débito. Apple Pay y Google Pay se activan solos en
-    // Checkout cuando el dominio está verificado en el panel de Stripe.
-    payment_method_types: ['card'],
+    /* Sin `payment_method_types`: Stripe usa los métodos activados en el panel
+       y enseña a cada cliente los que puede pagar. Tarjeta (crédito y débito) va
+       siempre; Apple Pay y Google Pay aparecen solos en cuanto el dominio está
+       verificado en Stripe y el navegador los soporta. Fijar la lista a mano los
+       apagaría. */
     line_items: items,
     customer_email: datos.email || undefined,
     locale: 'es-419',
@@ -108,7 +102,6 @@ export function crearSesionCheckout(datos: DatosSesion) {
       metodo_entrega: datos.metodoEntrega,
       sucursal_id: datos.sucursalId ?? '',
       usuario_id: datos.usuarioId ?? '',
-      tipo: contieneApartado ? 'apartado' : 'compra',
     },
     expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
   });

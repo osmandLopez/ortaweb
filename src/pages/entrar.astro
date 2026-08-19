@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import FormularioEntrar from '@/components/islands/FormularioEntrar';
+import { correoConfigurado } from '@/lib/correo';
 
 // Si ya hay sesión, no tiene sentido pedirla otra vez.
 if (Astro.locals.usuario) {
@@ -12,6 +13,11 @@ const destinoCrudo = Astro.url.searchParams.get('destino') ?? '/cuenta';
 const destino = destinoCrudo.startsWith('/') && !destinoCrudo.startsWith('//')
   ? destinoCrudo
   : '/cuenta';
+
+/* Sin proveedor de correo no hay verificación que esperar: el formulario tiene
+   que saberlo para no mandar al usuario a una pantalla de "revisa tu bandeja"
+   por un correo que nunca va a salir. */
+const conVerificacion = correoConfigurado();
 ---
 
 <BaseLayout titulo="Entrar" fondo="mostrador">
@@ -19,12 +25,12 @@ const destino = destinoCrudo.startsWith('/') && !destinoCrudo.startsWith('//')
     <div class="mx-auto max-w-md">
       <h1 class="rotulo rotulo-negro text-rotulo text-tinta-900">Tu cuenta</h1>
       <p class="mt-3 text-tinta-600">
-        Guarda tu historial, sigue tus apartados y ten tus direcciones a la mano.
+        Guarda tu historial de pedidos y ten tus datos a la mano.
         Para comprar no hace falta: el checkout funciona como invitado.
       </p>
 
       <div class="mt-8">
-        <FormularioEntrar client:load destino={destino} />
+        <FormularioEntrar client:load destino={destino} conVerificacion={conVerificacion} />
       </div>
     </div>
   </div>

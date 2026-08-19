@@ -1,0 +1,55 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ReenviarVerificacion from '@/components/islands/ReenviarVerificacion';
+
+/*
+ * Aterrizaje del enlace de verificación de correo.
+ *
+ * El correo apunta a /api/auth/verify-email?token=…&callbackURL=/verificar?estado=ok.
+ * Better Auth valida el token y redirige aquí: tal cual si todo salió bien, o
+ * con &error=TOKEN_EXPIRED / INVALID_TOKEN si el enlace ya no sirve. Con
+ * autoSignInAfterVerification la sesión queda abierta al llegar.
+ */
+const error = Astro.url.searchParams.get('error');
+const verificado = !error && Astro.url.searchParams.get('estado') === 'ok';
+const usuario = Astro.locals.usuario;
+
+const MENSAJES: Record<string, string> = {
+  TOKEN_EXPIRED: 'El enlace caducó: solo vale una hora. Pide uno nuevo y ábrelo enseguida.',
+  INVALID_TOKEN: 'Ese enlace no es válido o ya se usó. Pide uno nuevo para confirmar tu correo.',
+  USER_NOT_FOUND: 'No encontramos la cuenta de ese enlace. Puede que se haya eliminado.',
+  EMAIL_ALREADY_VERIFIED: 'Ese correo ya estaba confirmado. Puedes entrar con tu contraseña.',
+};
+---
+
+<BaseLayout titulo="Verificar correo" fondo="mostrador">
+  <div class="contenedor py-16">
+    <div class="mx-auto max-w-md">
+      <h1 class="rotulo rotulo-negro text-rotulo text-tinta-900">
+        {verificado ? 'Cuenta confirmada' : 'Confirma tu correo'}
+      </h1>
+
+      {verificado ? (
+        <div class="nota-seccion mt-8 space-y-4">
+          <p class="text-sm leading-relaxed text-tinta-600">
+            Listo: tu correo quedó confirmado{usuario ? ' y tu sesión ya está abierta' : ''}.
+            Desde tu cuenta puedes seguir tus pedidos y tener tus datos a la mano.
+          </p>
+          <a href={usuario ? '/cuenta' : '/entrar'} class="btn-primario w-full">
+            {usuario ? 'Ir a mi cuenta' : 'Entrar'}
+          </a>
+          <a href="/tienda" class="btn-linea w-full">Ver el catálogo</a>
+        </div>
+      ) : (
+        <div class="nota-seccion mt-8 space-y-4">
+          <p role="alert" class="text-sm leading-relaxed text-tinta-600">
+            {error ? MENSAJES[error] ?? 'No pudimos confirmar tu correo con ese enlace.'
+                   : 'Abre el enlace que te mandamos por correo para activar tu cuenta.'}
+          </p>
+          <ReenviarVerificacion client:load />
+          <a href="/entrar" class="btn-linea w-full">Volver a entrar</a>
+        </div>
+      )}
+    </div>
+  </div>
+</BaseLayout>

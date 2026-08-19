@@ -6,17 +6,11 @@ import { precio } from '@/lib/money';
 
 // El middleware ya garantizó que hay sesión antes de llegar aquí.
 const usuario = Astro.locals.usuario!;
-const pedidos = await db.listarPedidosDeUsuario(usuario.id);
-
-const apartados = pedidos.filter((p) => p.esApartado && p.estado !== 'cancelado');
-const compras = pedidos.filter((p) => !p.esApartado);
-const saldoTotal = apartados.reduce((n, p) => n + Math.max(0, p.total - p.pagado), 0);
+const compras = await db.listarPedidosDeUsuario(usuario.id);
 
 const ETIQUETA_ESTADO: Record<string, string> = {
   pendiente_pago: 'Pendiente de pago',
   pagado: 'Pagado',
-  apartado_activo: 'Apartado activo',
-  apartado_liquidado: 'Liquidado',
   en_preparacion: 'En preparación',
   enviado: 'Enviado',
   listo_para_recoger: 'Listo para recoger',
@@ -44,63 +38,9 @@ const fecha = (iso: string) =>
       </div>
     </div>
 
-    {apartados.length > 0 && (
-      <section class="mt-10">
-        <div class="flex items-end justify-between gap-4 border-b border-tinta-200 pb-3">
-          <h2 class="rotulo text-rotulo-sm text-tinta-900">Tus apartados</h2>
-          {saldoTotal > 0 && (
-            <p class="font-nota text-sm text-mistico-700">
-              Saldo total {precio(saldoTotal)}
-            </p>
-          )}
-        </div>
-
-        <ul class="mt-6 grid gap-4 md:grid-cols-2">
-          {apartados.map((p) => {
-            const saldo = Math.max(0, p.total - p.pagado);
-            const avance = p.total > 0 ? Math.min(100, (p.pagado / p.total) * 100) : 0;
-            return (
-              <li class="nota-seccion">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="font-nota text-xs text-tinta-400">Folio {p.folio}</p>
-                    <p class="mt-1 text-sm font-bold text-tinta-900">
-                      {p.items.map((i) => i.nombre).join(', ')}
-                    </p>
-                  </div>
-                  <span class="insignia-apartado shrink-0">{ETIQUETA_ESTADO[p.estado]}</span>
-                </div>
-
-                <div class="mt-4 h-1.5 w-full rounded-full bg-tinta-100">
-                  <div class="h-1.5 rounded-full bg-mistico-500" style={`width: ${avance}%`}></div>
-                </div>
-
-                <dl class="mt-3 space-y-1.5 text-sm">
-                  <div class="guia">
-                    <dt class="text-tinta-600">Abonado</dt>
-                    <dd class="font-nota tabular-nums text-tinta-900">{precio(p.pagado)}</dd>
-                  </div>
-                  <div class="guia">
-                    <dt class="text-mistico-700">Por liquidar</dt>
-                    <dd class="font-nota tabular-nums text-mistico-700">{precio(saldo)}</dd>
-                  </div>
-                </dl>
-
-                {p.venceEn && saldo > 0 && (
-                  <p class="mt-3 font-nota text-[11px] text-tinta-500">
-                    Vence el {fecha(p.venceEn)}
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-    )}
-
     <section class="mt-12">
       <h2 class="rotulo text-rotulo-sm border-b border-tinta-200 pb-3 text-tinta-900">
-        Tus compras
+        Tus pedidos
       </h2>
 
       {compras.length === 0 ? (
@@ -121,9 +61,10 @@ const fecha = (iso: string) =>
                 </p>
               </div>
               <div class="text-right">
-                <p class="font-nota text-sm tabular-nums text-tinta-900">{precio(p.pagado)}</p>
+                <p class="font-nota text-sm tabular-nums text-tinta-900">{precio(p.total)}</p>
                 <p class="font-nota text-[10px] uppercase tracking-[0.12em] text-tinta-400">
-                  {ETIQUETA_ESTADO[p.estado]}
+                  {/* Un pedido histórico puede traer un estado que ya no usamos. */}
+                  {ETIQUETA_ESTADO[p.estado] ?? p.estado.replace(/_/g, ' ')}
                 </p>
               </div>
             </li>

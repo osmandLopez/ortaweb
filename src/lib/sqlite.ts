@@ -56,9 +56,6 @@ function aProducto(f: FilaProducto): Producto {
     stock: f.stock,
     categoriaId: f.categoriaId,
     imagenes: JSON.parse(f.imagenes) as string[],
-    apartable: f.apartable,
-    anticipoMinimo: f.anticipoMinimo,
-    plazoSemanas: f.plazoSemanas,
     temporada: f.temporada,
     destacado: f.destacado,
     activo: f.activo,
@@ -94,7 +91,6 @@ export const sqlite: Repositorio = {
     }
 
     if (filtro.temporada !== undefined) donde.push(eq(t.productos.temporada, filtro.temporada));
-    if (filtro.apartable !== undefined) donde.push(eq(t.productos.apartable, filtro.apartable));
     if (filtro.destacado !== undefined) donde.push(eq(t.productos.destacado, filtro.destacado));
 
     if (filtro.busqueda) {
@@ -228,9 +224,9 @@ export const sqlite: Repositorio = {
         sucursalId: pedido.sucursalId,
         direccionId: null,
         estado: pedido.estado,
-        esApartado: pedido.esApartado,
-        venceEn: pedido.venceEn,
         stripeSessionId: pedido.stripeSessionId,
+        stripePaymentIntentId: pedido.stripePaymentIntentId,
+        pagadoEn: pedido.pagadoEn,
         creadoEn: pedido.creadoEn,
       });
 
@@ -242,10 +238,8 @@ export const sqlite: Repositorio = {
           slug: i.slug,
           nombre: i.nombre,
           precio: i.precio,
-          anticipo: i.anticipo,
           imagen: i.imagen,
           cantidad: i.cantidad,
-          modo: i.modo,
         })),
       );
     });
@@ -281,34 +275,31 @@ export const sqlite: Repositorio = {
       const [f] = await tx.select().from(t.pedidos).where(eq(t.pedidos.stripeSessionId, sessionId)).limit(1);
       if (!f) return null;
 
-      const pagado = f.pagado + monto;
-      const estado = f.esApartado
-        ? pagado >= f.total ? 'apartado_liquidado' : 'apartado_activo'
-        : 'pagado';
-
-      await tx.update(t.pedidos).set({ pagado, estado }).where(eq(t.pedidos.id, f.id));
-
-      await tx.insert(t.abonos).values({
-        id: id(),
-        pedidoId: f.id,
-        monto,
-        stripePaymentIntentId: paymentIntentId,
-        fecha: ahora(),
-      });
-
-      /* El inventario se descuenta al confirmar el cobro, nunca antes, y solo
-         la primera vez: un abono posterior no vuelve a descontar. */
-      if (f.pagado === 0) {
-        const items = await tx.select().from(t.pedidoItems).where(eq(t.pedidoItems.pedidoId, f.id));
-        for (const i of items) {
-          await tx
-            .update(t.productos)
-            .set({ stock: sql`max(0, ${t.productos.stock} - ${i.cantidad})` })
-            .where(eq(t.productos.id, i.productoId));
-        }
+      /* Idempotencia: si el pedido ya se confirmó, esto es un evento repetido
+         de Stripe. Se devuelve tal cual, sin volver a tocar el inventario ni
+         disparar el correo de confirmación. */
+      if (f.estado !== 'pendiente_pago') {
+        return { pedido: await armarPedido(f, tx), primeraVez: false };
       }
 
-      return armarPedido({ ...f, pagado, estado }, tx);
+      const cambios = {
+        pagado: monto,
+        estado: 'pagado' as const,
+        stripePaymentIntentId: paymentIntentId,
+        pagadoEn: ahora(),
+      };
+      await tx.update(t.pedidos).set(cambios).where(eq(t.pedidos.id, f.id));
+
+      // El inventario se descuenta al confirmar el cobro, nunca antes.
+      const items = await tx.select().from(t.pedidoItems).where(eq(t.pedidoItems.pedidoId, f.id));
+      for (const i of items) {
+        await tx
+          .update(t.productos)
+          .set({ stock: sql`max(0, ${t.productos.stock} - ${i.cantidad})` })
+          .where(eq(t.productos.id, i.productoId));
+      }
+
+      return { pedido: await armarPedido({ ...f, ...cambios }, tx), primeraVez: true };
     });
   },
 
@@ -347,8 +338,6 @@ async function armarPedido(f: FilaPedido, ejecutor: Ejecutor = orm): Promise<Ped
         precio: i.precio,
         imagen: i.imagen,
         cantidad: i.cantidad,
-        modo: i.modo,
-        anticipo: i.anticipo,
       }),
     ),
     subtotal: f.subtotal,
@@ -359,9 +348,9 @@ async function armarPedido(f: FilaPedido, ejecutor: Ejecutor = orm): Promise<Ped
     sucursalId: f.sucursalId,
     direccion: null,
     estado: f.estado,
-    esApartado: f.esApartado,
-    venceEn: f.venceEn,
     stripeSessionId: f.stripeSessionId,
+    stripePaymentIntentId: f.stripePaymentIntentId,
+    pagadoEn: f.pagadoEn,
     creadoEn: f.creadoEn,
   };
 }

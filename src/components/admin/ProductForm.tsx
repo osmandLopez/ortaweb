@@ -1,6 +1,5 @@
 import { useState } from 'preact/hooks';
 import type { Categoria, Producto } from '@/lib/types';
-import { calcularAnticipo, precio } from '@/lib/money';
 
 interface Props {
   categorias: Categoria[];
@@ -13,7 +12,6 @@ type Estado = { tipo: 'inactivo' } | { tipo: 'guardando' } | { tipo: 'ok'; mensa
 const vacio = {
   nombre: '', slug: '', descripcion: '', sku: '',
   precio: '', precioAnterior: '', stock: '0', categoriaId: '',
-  apartable: false, anticipoMinimo: '30', plazoSemanas: '8',
   temporada: false, destacado: false, activo: true,
   imagenes: '',
 };
@@ -32,8 +30,7 @@ export default function ProductForm({ categorias, producto }: Props) {
           sku: producto.sku, precio: String(producto.precio / 100),
           precioAnterior: producto.precioAnterior ? String(producto.precioAnterior / 100) : '',
           stock: String(producto.stock), categoriaId: producto.categoriaId,
-          apartable: producto.apartable, anticipoMinimo: String(producto.anticipoMinimo),
-          plazoSemanas: String(producto.plazoSemanas), temporada: producto.temporada,
+          temporada: producto.temporada,
           destacado: producto.destacado, activo: producto.activo,
           imagenes: producto.imagenes.join('\n'),
         }
@@ -64,9 +61,6 @@ export default function ProductForm({ categorias, producto }: Props) {
     }
     if (!f.categoriaId) e.categoriaId = 'Elige dónde va a aparecer.';
     if (Number(f.stock) < 0) e.stock = 'El stock no puede ser negativo.';
-    if (f.apartable && (Number(f.anticipoMinimo) < 10 || Number(f.anticipoMinimo) > 100)) {
-      e.anticipoMinimo = 'El anticipo va de 10% a 100%.';
-    }
     setErrores(e);
     return Object.keys(e).length === 0;
   };
@@ -86,9 +80,6 @@ export default function ProductForm({ categorias, producto }: Props) {
       stock: Number(f.stock),
       categoriaId: f.categoriaId,
       imagenes: f.imagenes.split('\n').map((s) => s.trim()).filter(Boolean),
-      apartable: f.apartable,
-      anticipoMinimo: f.apartable ? Number(f.anticipoMinimo) : 0,
-      plazoSemanas: f.apartable ? Number(f.plazoSemanas) : 0,
       temporada: f.temporada,
       destacado: f.destacado,
       activo: f.activo,
@@ -110,7 +101,6 @@ export default function ProductForm({ categorias, producto }: Props) {
     if (!producto) setF(vacio);
   };
 
-  const anticipoCalc = calcularAnticipo(aCentavos(f.precio), Number(f.anticipoMinimo || 0));
   const raices = categorias.filter((c) => !c.padreId);
 
   return (
@@ -195,37 +185,6 @@ export default function ProductForm({ categorias, producto }: Props) {
           </div>
         </fieldset>
 
-        <fieldset class="nota-seccion" style={{ borderColor: f.apartable ? '#A855F7' : undefined }}>
-          <legend class="etiqueta text-mistico-600">Apartado</legend>
-
-          <label class="mt-4 flex items-start gap-3">
-            <input type="checkbox" checked={f.apartable} onChange={set('apartable')}
-              class="mt-0.5 h-4 w-4 rounded border-tinta-300 text-mistico-500 focus:ring-mistico-500" />
-            <span>
-              <span class="block text-sm font-bold text-tinta-900">Se puede apartar con anticipo</span>
-              <span class="block text-xs text-tinta-500">El cliente paga una parte hoy y liquida en abonos.</span>
-            </span>
-          </label>
-
-          {f.apartable && (
-            <div class="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <label class="campo-etiqueta" for="anticipoMinimo">Anticipo mínimo (%)</label>
-                <input id="anticipoMinimo" class="campo font-nota tabular-nums" inputMode="numeric" value={f.anticipoMinimo} onInput={set('anticipoMinimo')} />
-                {errores.anticipoMinimo && <p class="mt-1.5 text-xs text-red-600">{errores.anticipoMinimo}</p>}
-              </div>
-              <div>
-                <label class="campo-etiqueta" for="plazoSemanas">Plazo para liquidar (semanas)</label>
-                <input id="plazoSemanas" class="campo font-nota tabular-nums" inputMode="numeric" value={f.plazoSemanas} onInput={set('plazoSemanas')} />
-              </div>
-              {aCentavos(f.precio) > 0 && (
-                <p class="sm:col-span-2 rounded-md bg-mistico-50 px-3 py-2.5 font-nota text-xs text-mistico-800">
-                  El cliente pagará {precio(anticipoCalc)} hoy y {precio(aCentavos(f.precio) - anticipoCalc)} en abonos.
-                </p>
-              )}
-            </div>
-          )}
-        </fieldset>
       </div>
 
       <aside class="space-y-6">

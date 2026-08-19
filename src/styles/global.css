@@ -68,7 +68,7 @@
     @apply font-nota text-etiqueta uppercase;
   }
 
-  /* --- Firma: La Nota de Apartado ------------------------------------ */
+  /* --- Firma: la nota del mostrador ---------------------------------- */
 
   .nota {
     position: relative;
@@ -128,19 +128,6 @@
     flex: none;
   }
 
-  /* Casillas de abono: el medidor de progreso del apartado */
-  .abono {
-    @apply inline-flex h-6 w-6 items-center justify-center border font-nota text-[10px];
-    border-color: theme('colors.tinta.200');
-    border-radius: 4px;
-    color: theme('colors.tinta.400');
-  }
-  .abono[data-pagado='true'] {
-    background: theme('colors.mistico.500');
-    border-color: theme('colors.mistico.500');
-    color: #fff;
-  }
-
   /* --- Controles ------------------------------------------------------ */
 
   .btn {
@@ -149,9 +136,6 @@
   }
   .btn-primario {
     @apply btn bg-cielo-500 text-white hover:bg-cielo-600 active:translate-y-px;
-  }
-  .btn-apartado {
-    @apply btn bg-mistico-500 text-white hover:bg-mistico-600 active:translate-y-px;
   }
   .btn-linea {
     @apply btn border border-tinta-300 bg-white text-tinta-900 hover:border-tinta-900;
@@ -173,9 +157,6 @@
   }
   .insignia-temporada {
     @apply insignia bg-oro-500 text-tinta-900;
-  }
-  .insignia-apartado {
-    @apply insignia bg-mistico-100 text-mistico-800;
   }
   .insignia-nuevo {
     @apply insignia bg-cielo-500 text-white;

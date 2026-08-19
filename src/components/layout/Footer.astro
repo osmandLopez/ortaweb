@@ -11,24 +11,20 @@ const columnas = [
     enlaces: [
       { href: '/tienda', texto: 'Todo el catálogo' },
       { href: '/temporada', texto: 'Ventas de temporada' },
-      { href: '/apartados', texto: 'Apartados' },
       { href: '/tienda/novedades', texto: 'Novedades' },
     ],
   },
   {
     titulo: 'Tu cuenta',
     enlaces: [
-      { href: '/cuenta', texto: 'Mi perfil' },
-      { href: '/cuenta/pedidos', texto: 'Mis pedidos' },
-      { href: '/cuenta/apartados', texto: 'Mis apartados' },
-      { href: '/cuenta/deseos', texto: 'Lista de deseos' },
+      { href: '/cuenta', texto: 'Mi perfil y mis pedidos' },
+      { href: '/entrar', texto: 'Entrar o crear cuenta' },
     ],
   },
   {
     titulo: 'Ayuda',
     enlaces: [
       { href: '/envios', texto: 'Envíos y entregas' },
-      { href: '/como-apartar', texto: 'Cómo funciona un apartado' },
       { href: '/devoluciones', texto: 'Cambios y devoluciones' },
       { href: '/contacto', texto: 'Contacto' },
     ],
@@ -42,8 +38,8 @@ const columnas = [
       <div>
         <Logo alto="md" />
         <p class="mt-5 max-w-xs text-sm leading-relaxed text-tinta-400">
-          Regalos, temporada y novedades para la casa. Compra en línea, recoge en tienda
-          o apártalo con anticipo.
+          Regalos, temporada y novedades para la casa. Compra en línea y recoge en
+          tienda o recíbelo en casa.
         </p>
         <form class="mt-7 max-w-sm" action="/api/boletin" method="post">
           <label for="boletin" class="etiqueta text-tinta-500">Avísame de lo que llega</label>

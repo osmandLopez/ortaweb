@@ -47,7 +47,6 @@ export const memoria: Repositorio = {
     }
 
     if (filtro.temporada !== undefined) lista = lista.filter((p) => p.temporada === filtro.temporada);
-    if (filtro.apartable !== undefined) lista = lista.filter((p) => p.apartable === filtro.apartable);
     if (filtro.destacado !== undefined) lista = lista.filter((p) => p.destacado === filtro.destacado);
 
     if (filtro.busqueda) {
@@ -177,26 +176,25 @@ export const memoria: Repositorio = {
     return false;
   },
 
-  async marcarPagado(sessionId, monto) {
+  async marcarPagado(sessionId, monto, paymentIntentId = null) {
     const p = pedidos.find((x) => x.stripeSessionId === sessionId);
     if (!p) return null;
 
-    const eraPrimerCobro = p.pagado === 0;
-    p.pagado += monto;
-    p.estado = p.esApartado
-      ? p.pagado >= p.total ? 'apartado_liquidado' : 'apartado_activo'
-      : 'pagado';
+    // Evento repetido de Stripe: el pedido ya está confirmado, no se toca nada.
+    if (p.estado !== 'pendiente_pago') return { pedido: p, primeraVez: false };
 
-    /* El inventario se descuenta al confirmar el cobro, nunca antes, y solo la
-       primera vez: un abono posterior no vuelve a descontar. */
-    if (eraPrimerCobro) {
-      for (const i of p.items) {
-        const prod = productos.find((x) => x.id === i.productoId);
-        if (prod) prod.stock = Math.max(0, prod.stock - i.cantidad);
-      }
+    p.pagado = monto;
+    p.estado = 'pagado';
+    p.stripePaymentIntentId = paymentIntentId;
+    p.pagadoEn = ahora();
+
+    // El inventario se descuenta al confirmar el cobro, nunca antes.
+    for (const i of p.items) {
+      const prod = productos.find((x) => x.id === i.productoId);
+      if (prod) prod.stock = Math.max(0, prod.stock - i.cantidad);
     }
 
-    return p;
+    return { pedido: p, primeraVez: true };
   },
 
   async registrarEvento(eventoId) {

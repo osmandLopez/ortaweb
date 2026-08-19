@@ -12,6 +12,9 @@ interface ImportMetaEnv {
   readonly PUBLIC_STRIPE_PUBLISHABLE_KEY: string;
   readonly PUBLIC_SITE_URL: string;
   readonly BETTER_AUTH_SECRET: string;
+  readonly BETTER_AUTH_TRUSTED_ORIGINS?: string;
+  readonly RESEND_API_KEY?: string;
+  readonly CORREO_REMITENTE?: string;
   readonly DATABASE_URL: string;
   readonly DATABASE_AUTH_TOKEN?: string;
 }

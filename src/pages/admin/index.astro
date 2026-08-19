@@ -8,14 +8,14 @@ const pedidos = await db.listarPedidos();
 const categorias = await db.listarCategorias();
 
 const cobrado = pedidos.reduce((n, p) => n + p.pagado, 0);
-const apartados = pedidos.filter((p) => p.esApartado);
-const porCobrar = apartados.reduce((n, p) => n + (p.total - p.pagado), 0);
+const pagados = pedidos.filter((p) => p.estado !== 'pendiente_pago' && p.estado !== 'cancelado');
+const pendientes = pedidos.filter((p) => p.estado === 'pendiente_pago');
 const agotados = productos.filter((p) => p.stock === 0);
 const bajos = productos.filter((p) => p.stock > 0 && p.stock <= 5);
 
 const metricas = [
-  { titulo: 'Cobrado', valor: precio(cobrado), detalle: `${pedidos.length} pedidos` },
-  { titulo: 'Saldo de apartados', valor: precio(porCobrar), detalle: `${apartados.length} activos`, acento: 'text-mistico-700' },
+  { titulo: 'Cobrado', valor: precio(cobrado), detalle: `${pagados.length} pedidos pagados` },
+  { titulo: 'Pendientes de pago', valor: String(pendientes.length), detalle: 'sin confirmar en Stripe' },
   { titulo: 'En catálogo', valor: String(productos.length), detalle: `${categorias.length} categorías` },
   { titulo: 'Sin existencia', valor: String(agotados.length), detalle: `${bajos.length} con stock bajo`, acento: agotados.length ? 'text-red-600' : undefined },
 ];

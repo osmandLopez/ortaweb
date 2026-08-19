@@ -5,12 +5,9 @@ import {
   cambiarCantidad,
   carrito,
   cerrarCajon,
-  hayApartado,
   quitar,
-  saldoApartado,
-  subtotalACobrar,
+  subtotal,
   totalItems,
-  valorMercancia,
 } from '@/stores/cart';
 import { precio } from '@/lib/money';
 import { UMBRAL_ENVIO_GRATIS } from '@/lib/shipping';
@@ -21,19 +18,13 @@ export default function CartDrawer() {
   const abierto = useStore(cajonAbierto);
   const guardados = useStore(carrito);
   const nGuardado = useStore(totalItems);
-  const aCobrarGuardado = useStore(subtotalACobrar);
-  const mercanciaGuardada = useStore(valorMercancia);
-  const saldoGuardado = useStore(saldoApartado);
-  const apartadoGuardado = useStore(hayApartado);
+  const subtotalGuardado = useStore(subtotal);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Hasta que la isla monta se repite el render del servidor: carrito vacío.
   const items = hidratado ? guardados : [];
   const n = hidratado ? nGuardado : 0;
-  const aCobrar = hidratado ? aCobrarGuardado : 0;
-  const mercancia = hidratado ? mercanciaGuardada : 0;
-  const saldo = hidratado ? saldoGuardado : 0;
-  const conApartado = hidratado && apartadoGuardado;
+  const mercancia = hidratado ? subtotalGuardado : 0;
 
   useEffect(() => {
     if (!abierto) return;
@@ -105,7 +96,7 @@ export default function CartDrawer() {
           ) : (
             <ul class="divide-y divide-tinta-200">
               {items.map((item) => (
-                <li key={`${item.productoId}:${item.modo}`} class="flex gap-4 py-4">
+                <li key={item.productoId} class="flex gap-4 py-4">
                   <div
                     class="h-20 w-16 shrink-0 rounded border border-tinta-200 bg-tinta-50"
                     style={item.imagen ? { backgroundImage: `url(${item.imagen})`, backgroundSize: 'cover' } : undefined}
@@ -118,23 +109,19 @@ export default function CartDrawer() {
                       </a>
                       <button
                         type="button"
-                        onClick={() => quitar(item.productoId, item.modo)}
+                        onClick={() => quitar(item.productoId)}
                         class="font-nota text-[11px] text-tinta-400 underline hover:text-tinta-900"
                       >
                         Quitar
                       </button>
                     </div>
 
-                    {item.modo === 'apartado' && (
-                      <p class="insignia-apartado mt-1.5">Apartado · anticipo {precio(item.anticipo)}</p>
-                    )}
-
                     <div class="mt-3 flex items-center justify-between">
                       <div class="inline-flex items-center rounded border border-tinta-300">
                         <button
                           type="button"
                           class="px-2.5 py-1 text-tinta-600 hover:text-tinta-900"
-                          onClick={() => cambiarCantidad(item.productoId, item.modo, item.cantidad - 1)}
+                          onClick={() => cambiarCantidad(item.productoId, item.cantidad - 1)}
                           aria-label={`Quitar una unidad de ${item.nombre}`}
                         >
                           −
@@ -143,14 +130,14 @@ export default function CartDrawer() {
                         <button
                           type="button"
                           class="px-2.5 py-1 text-tinta-600 hover:text-tinta-900"
-                          onClick={() => cambiarCantidad(item.productoId, item.modo, item.cantidad + 1)}
+                          onClick={() => cambiarCantidad(item.productoId, item.cantidad + 1)}
                           aria-label={`Agregar una unidad de ${item.nombre}`}
                         >
                           +
                         </button>
                       </div>
                       <p class="font-nota text-sm tabular-nums text-tinta-900">
-                        {precio((item.modo === 'apartado' ? item.anticipo : item.precio) * item.cantidad)}
+                        {precio(item.precio * item.cantidad)}
                       </p>
                     </div>
                   </div>
@@ -164,18 +151,8 @@ export default function CartDrawer() {
           <footer class="border-t border-tinta-200 px-5 py-5">
             <dl class="space-y-2 text-sm">
               <div class="guia">
-                <dt class="text-tinta-600">Mercancía</dt>
-                <dd class="font-nota tabular-nums text-tinta-900">{precio(mercancia)}</dd>
-              </div>
-              {conApartado && (
-                <div class="guia">
-                  <dt class="text-mistico-700">Saldo por liquidar</dt>
-                  <dd class="font-nota tabular-nums text-mistico-700">{precio(saldo)}</dd>
-                </div>
-              )}
-              <div class="guia border-t border-dashed border-tinta-300 pt-2.5">
-                <dt class="font-bold text-tinta-900">Pagas ahora</dt>
-                <dd class="font-nota text-lg font-bold tabular-nums text-tinta-900">{precio(aCobrar)}</dd>
+                <dt class="font-bold text-tinta-900">Subtotal</dt>
+                <dd class="font-nota text-lg font-bold tabular-nums text-tinta-900">{precio(mercancia)}</dd>
               </div>
             </dl>
 

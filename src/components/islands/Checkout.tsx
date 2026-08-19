@@ -1,7 +1,8 @@
 import { useStore } from '@nanostores/preact';
 import { useState } from 'preact/hooks';
-import { carrito, hayApartado, saldoApartado, subtotalACobrar, valorMercancia } from '@/stores/cart';
+import { carrito, subtotal } from '@/stores/cart';
 import { precio } from '@/lib/money';
+import { correoValido } from '@/lib/auth-cliente';
 import { useHidratado } from '@/stores/hidratacion';
 import type { MetodoEntrega, OpcionEnvio, Sucursal } from '@/lib/types';
 
@@ -13,16 +14,10 @@ interface Props {
 export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
   const hidratado = useHidratado();
   const guardados = useStore(carrito);
-  const aCobrarGuardado = useStore(subtotalACobrar);
-  const mercanciaGuardada = useStore(valorMercancia);
-  const saldoGuardado = useStore(saldoApartado);
-  const apartadoGuardado = useStore(hayApartado);
+  const subtotalGuardado = useStore(subtotal);
 
   const items = hidratado ? guardados : [];
-  const aCobrar = hidratado ? aCobrarGuardado : 0;
-  const mercancia = hidratado ? mercanciaGuardada : 0;
-  const saldo = hidratado ? saldoGuardado : 0;
-  const conApartado = hidratado && apartadoGuardado;
+  const mercancia = hidratado ? subtotalGuardado : 0;
 
   const [email, setEmail] = useState(emailPrevio);
   const [metodo, setMetodo] = useState<MetodoEntrega>('envio');
@@ -36,7 +31,7 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
 
   const opcion = opciones.find((o) => o.id === opcionId) ?? null;
   const costoEnvio = metodo === 'envio' ? opcion?.costo ?? 0 : 0;
-  const totalHoy = aCobrar + costoEnvio;
+  const total = mercancia + costoEnvio;
 
   const cotizar = async () => {
     setError('');
@@ -57,7 +52,7 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
   const pagar = async (e: Event) => {
     e.preventDefault();
     setError('');
-    if (!email) return setError('Escribe tu correo: ahí te llega la confirmación.');
+    if (!correoValido(email)) return setError('Escribe un correo válido: ahí te llega la confirmación.');
     if (metodo === 'envio' && !opcion) return setError('Cotiza el envío con tu código postal.');
     if (metodo === 'pickup' && !sucursalId) return setError('Elige la sucursal donde vas a recoger.');
 
@@ -66,7 +61,7 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        items: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad, modo: i.modo })),
+        items: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad })),
         email,
         metodoEntrega: metodo,
         cp: metodo === 'envio' ? cp : undefined,
@@ -75,14 +70,16 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
       }),
     });
 
-    if (!res.ok) {
+    // El cuerpo puede no ser JSON si algo revienta antes de llegar al endpoint.
+    const cuerpo = await res.json().catch(() => null);
+
+    if (!res.ok || !cuerpo?.url) {
       setEnviando(false);
-      return setError((await res.json()).error ?? 'No se pudo iniciar el pago.');
+      return setError(cuerpo?.error ?? 'No se pudo iniciar el pago. Inténtalo de nuevo.');
     }
     // Stripe Checkout aloja el formulario de tarjeta: ningún dato de pago
     // toca nuestro servidor.
-    const { url } = await res.json();
-    window.location.href = url;
+    window.location.href = cuerpo.url;
   };
 
   /* El servidor no conoce el carrito, así que este bloque es también lo que se
@@ -193,12 +190,6 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
             Al continuar te llevamos a Stripe para capturar la tarjeta. Aceptamos crédito,
             débito, Apple&nbsp;Pay y Google&nbsp;Pay.
           </p>
-          {conApartado && (
-            <p class="mt-3 rounded-md bg-mistico-50 px-3 py-2.5 text-sm text-mistico-800">
-              Hoy pagas solo el anticipo. El saldo de {precio(saldo)} lo abonas en línea o en
-              sucursal antes de la fecha de vencimiento.
-            </p>
-          )}
         </section>
       </div>
 
@@ -207,14 +198,13 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
 
         <ul class="mt-4 divide-y divide-tinta-200">
           {items.map((i) => (
-            <li key={`${i.productoId}:${i.modo}`} class="flex justify-between gap-3 py-2.5 text-sm">
+            <li key={i.productoId} class="flex justify-between gap-3 py-2.5 text-sm">
               <span class="text-tinta-700">
                 {i.nombre}
                 <span class="font-nota text-[11px] text-tinta-400"> ×{i.cantidad}</span>
-                {i.modo === 'apartado' && <span class="mt-1 block text-[11px] text-mistico-700">Anticipo</span>}
               </span>
               <span class="font-nota shrink-0 tabular-nums text-tinta-900">
-                {precio((i.modo === 'apartado' ? i.anticipo : i.precio) * i.cantidad)}
+                {precio(i.precio * i.cantidad)}
               </span>
             </li>
           ))}
@@ -222,27 +212,25 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
 
         <dl class="mt-4 space-y-2 border-t border-dashed border-tinta-300 pt-4 text-sm">
           <div class="guia">
+            <dt class="text-tinta-600">Subtotal</dt>
+            <dd class="font-nota tabular-nums text-tinta-900">{precio(mercancia)}</dd>
+          </div>
+          <div class="guia">
             <dt class="text-tinta-600">Envío</dt>
             <dd class="font-nota tabular-nums text-tinta-900">
               {metodo === 'pickup' ? 'Recoges' : opcion ? (costoEnvio === 0 ? 'Gratis' : precio(costoEnvio)) : 'Por cotizar'}
             </dd>
           </div>
-          {conApartado && (
-            <div class="guia">
-              <dt class="text-mistico-700">Saldo por liquidar</dt>
-              <dd class="font-nota tabular-nums text-mistico-700">{precio(saldo)}</dd>
-            </div>
-          )}
           <div class="guia border-t border-tinta-200 pt-3">
-            <dt class="font-bold text-tinta-900">Pagas hoy</dt>
-            <dd class="font-nota text-xl font-bold tabular-nums text-tinta-900">{precio(totalHoy)}</dd>
+            <dt class="font-bold text-tinta-900">Total</dt>
+            <dd class="font-nota text-xl font-bold tabular-nums text-tinta-900">{precio(total)}</dd>
           </div>
         </dl>
 
         {error && <p role="alert" class="mt-4 rounded-md bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}
 
         <button type="submit" class="btn-primario mt-5 w-full" disabled={enviando}>
-          {enviando ? 'Abriendo pago seguro…' : `Pagar ${precio(totalHoy)}`}
+          {enviando ? 'Abriendo pago seguro…' : `Pagar ${precio(total)}`}
         </button>
         <p class="mt-3 text-center font-nota text-[11px] text-tinta-500">
           Pago procesado por Stripe · Cifrado extremo a extremo

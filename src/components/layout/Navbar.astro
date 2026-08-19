@@ -11,13 +11,11 @@ const { categorias, activo } = Astro.props;
    cuelgan de "Tienda" como submenú, para que el panel pueda crecer el catálogo
    sin que nadie tenga que tocar la navegación.
 
-   Solo cuatro entradas, a propósito: temporada ya tiene su propia tarjeta y su
-   franja dorada en el inicio, así que repetirla aquí era ruido. Se llega igual
-   por /temporada, que sigue viva. */
+   Solo cuatro entradas, a propósito: lo demás cuelga del submenú de Tienda. */
 const principal = [
   { href: '/', texto: 'Inicio', punto: null },
   { href: '/tienda', texto: 'Tienda', punto: null },
-  { href: '/apartados', texto: 'Apartados', punto: 'bg-mistico-500' },
+  { href: '/temporada', texto: 'Temporada', punto: 'bg-oro-500' },
   { href: '/contacto', texto: 'Contacto', punto: null },
 ];
 

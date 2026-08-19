@@ -1,11 +1,10 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import ProductoImagen from '@/components/commerce/ProductoImagen.astro';
-import ApartadoTicket from '@/components/commerce/ApartadoTicket.astro';
 import ProductCard from '@/components/commerce/ProductCard.astro';
 import AddToCart from '@/components/islands/AddToCart';
 import { db } from '@/lib/db';
-import { calcularAnticipo, descuento, precio } from '@/lib/money';
+import { descuento, precio } from '@/lib/money';
 
 const { slug } = Astro.params;
 const producto = await db.obtenerProducto(slug!);
@@ -20,7 +19,6 @@ const relacionados = (await db.listarProductos({ categoriaSlug: (madre ?? catego
   .slice(0, 4);
 
 const rebaja = descuento(producto.precio, producto.precioAnterior);
-const anticipo = producto.apartable ? calcularAnticipo(producto.precio, producto.anticipoMinimo) : 0;
 const sucursales = await db.listarSucursales();
 ---
 
@@ -94,8 +92,6 @@ const sucursales = await db.listarSucursales();
             precioCentavos={producto.precio}
             imagen={producto.imagenes[0] ?? ''}
             stock={producto.stock}
-            apartable={producto.apartable}
-            anticipo={anticipo}
           />
         </div>
 
@@ -112,25 +108,7 @@ const sucursales = await db.listarSucursales();
               {sucursales.map((s) => s.nombre).join(' · ')}
             </span>
           </li>
-          {producto.apartable && (
-            <li class="flex items-start gap-4 py-4">
-              <span class="etiqueta w-24 shrink-0 pt-0.5 text-mistico-600">Apartado</span>
-              <span class="text-sm text-tinta-700">
-                Desde {precio(anticipo)} de anticipo · {producto.plazoSemanas} semanas para liquidar
-              </span>
-            </li>
-          )}
         </ul>
-
-        {producto.apartable && (
-          <div class="mt-8">
-            <ApartadoTicket producto={producto} folio={`ON-${producto.sku.slice(-6)}`} fondo="#FFFFFF">
-              <a slot="accion" href="#contenido" class="btn-apartado mt-4 w-full">
-                Usa el botón “Apartarlo” de arriba
-              </a>
-            </ApartadoTicket>
-          </div>
-        )}
       </div>
     </div>
 

@@ -1,0 +1,38 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import FormularioRestablecer from '@/components/islands/FormularioRestablecer';
+
+/*
+ * Aterrizaje del enlace "olvidé mi contraseña".
+ *
+ * El correo apunta a /api/auth/reset-password/<token>, que comprueba el token y
+ * redirige aquí con ?token=… si sirve, o con ?error=INVALID_TOKEN si caducó o ya
+ * se usó. Esta página no valida nada por su cuenta: solo enseña el formulario o
+ * el aviso, y quien decide es Better Auth.
+ */
+const token = Astro.url.searchParams.get('token');
+const error = Astro.url.searchParams.get('error');
+---
+
+<BaseLayout titulo="Restablecer contraseña" fondo="mostrador">
+  <div class="contenedor py-16">
+    <div class="mx-auto max-w-md">
+      <h1 class="rotulo rotulo-negro text-rotulo text-tinta-900">Contraseña nueva</h1>
+
+      {token && !error ? (
+        <div class="mt-8">
+          <FormularioRestablecer client:load token={token} />
+        </div>
+      ) : (
+        <div class="nota-seccion mt-8 space-y-4">
+          <p class="text-sm leading-relaxed text-tinta-600">
+            {error === 'INVALID_TOKEN'
+              ? 'Ese enlace ya no sirve: caducó o se usó antes. Pide uno nuevo y ábrelo dentro de la siguiente hora.'
+              : 'Abre el enlace que te llegó por correo para poder cambiar tu contraseña.'}
+          </p>
+          <a href="/entrar" class="btn-primario w-full">Pedir un enlace nuevo</a>
+        </div>
+      )}
+    </div>
+  </div>
+</BaseLayout>

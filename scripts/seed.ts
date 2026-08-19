@@ -23,7 +23,7 @@ async function main() {
     /* Se vacía el catálogo, no las cuentas: rehacer los productos de prueba no
        es motivo para echar a todo el mundo de su sesión. Orden inverso a las
        dependencias. */
-    for (const tabla of [t.abonos, t.pedidoItems, t.pedidos, t.listaDeseos, t.productos, t.categorias, t.sucursales, t.eventosStripe]) {
+    for (const tabla of [t.pedidoItems, t.pedidos, t.listaDeseos, t.productos, t.categorias, t.sucursales, t.eventosStripe]) {
       await orm.delete(tabla);
     }
     console.log('Catálogo vaciado. Las cuentas de usuario no se tocan.');

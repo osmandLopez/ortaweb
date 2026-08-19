@@ -1,7 +1,6 @@
 import { useState } from 'preact/hooks';
 import { agregar } from '@/stores/cart';
 import { precio } from '@/lib/money';
-import type { ItemCarrito } from '@/lib/types';
 
 interface Props {
   productoId: string;
@@ -10,8 +9,6 @@ interface Props {
   precioCentavos: number;
   imagen?: string;
   stock: number;
-  apartable: boolean;
-  anticipo: number;
   /** compacto: una sola acción, para las tarjetas de la rejilla */
   compacto?: boolean;
 }
@@ -23,15 +20,13 @@ export default function AddToCart({
   precioCentavos,
   imagen = '',
   stock,
-  apartable,
-  anticipo,
   compacto = false,
 }: Props) {
   const [cantidad, setCantidad] = useState(1);
   const agotado = stock <= 0;
 
-  const alAgregar = (modo: ItemCarrito['modo']) => {
-    agregar({ productoId, slug, nombre, precio: precioCentavos, imagen, cantidad, modo, anticipo });
+  const alAgregar = () => {
+    agregar({ productoId, slug, nombre, precio: precioCentavos, imagen, cantidad });
   };
 
   if (agotado) {
@@ -44,7 +39,7 @@ export default function AddToCart({
 
   if (compacto) {
     return (
-      <button type="button" onClick={() => alAgregar('compra')} class="btn-primario w-full">
+      <button type="button" onClick={alAgregar} class="btn-primario w-full">
         Agregar
       </button>
     );
@@ -68,15 +63,9 @@ export default function AddToCart({
         <p class="font-nota text-[11px] text-tinta-500">{stock} en existencia</p>
       </div>
 
-      <button type="button" onClick={() => alAgregar('compra')} class="btn-primario w-full">
+      <button type="button" onClick={alAgregar} class="btn-primario w-full">
         Agregar al carrito · {precio(precioCentavos * cantidad)}
       </button>
-
-      {apartable && (
-        <button type="button" onClick={() => alAgregar('apartado')} class="btn-apartado w-full">
-          Apartarlo con {precio(anticipo * cantidad)}
-        </button>
-      )}
     </div>
   );
 }
