@@ -7,6 +7,7 @@
  * configuración de Better Auth), así que este script es la única vía. Crea la
  * cuenta normal desde /entrar y después ascíendela aquí.
  */
+import './entorno-local';
 import { db } from '../src/lib/db';
 
 const email = process.argv[2];

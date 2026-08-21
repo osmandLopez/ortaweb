@@ -2,7 +2,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { and, asc, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
 import * as t from './schema';
 import { ErrorDeDatos, type FiltroProductos, type Repositorio } from './repositorio';
-import { env, urlBaseDeDatos } from './entorno';
+import { tokenBaseDeDatos, urlBaseDeDatos } from './entorno';
 import type { Categoria, ItemCarrito, Pedido, Producto, Sucursal } from './types';
 
 /*
@@ -33,7 +33,7 @@ const { drizzle } = esRemota
   : await import('drizzle-orm/libsql/node');
 
 export const orm = drizzle({
-  connection: { url: urlBase, authToken: env('DATABASE_AUTH_TOKEN') },
+  connection: { url: urlBase, authToken: tokenBaseDeDatos() },
   schema: t,
 }) as LibSQLDatabase<typeof t>;
 

@@ -134,7 +134,8 @@ de `db/migraciones/` se genera desde ahí y no se edita a mano.
 | `npm run db:seed` | Siembra el catálogo si la base está vacía |
 | `npm run db:reset` | Vacía y vuelve a sembrar |
 | `npm run db:studio` | Explorador visual de la base |
-| `npx tsx scripts/hacer-admin.ts correo` | Asciende una cuenta a administrador |
+| `npm run db:probar` | Diagnóstico: a dónde apunta, si responde y si le faltan tablas |
+| `npm run admin -- correo` | Asciende una cuenta a administrador |
 
 `db:reset` vacía el catálogo pero **no** las cuentas: rehacer los productos de
 prueba no es motivo para echar a todos de su sesión.
@@ -240,12 +241,95 @@ Copia el `whsec_…` que imprime a `STRIPE_WEBHOOK_SECRET`. Tarjeta de prueba:
 
 ---
 
+## Publicar: Turso y Resend
+
+El código ya habla con los dos; lo que falta al desplegar son las credenciales.
+Mientras no estén, el sitio **no revienta**: arranca en modo demo con el catálogo
+de muestra en memoria y sin verificación de correo. Eso sirve para enseñarlo, no
+para vender — nada de lo que se escriba se conserva.
+
+> Los scripts de mantenimiento (`db:*`, `correo:probar`) leen `.env` por su cuenta
+> vía [scripts/entorno-local.ts](scripts/entorno-local.ts). El dev server lo hace
+> Vite, pero `drizzle-kit` y `tsx` arrancan con el entorno pelado del sistema: sin
+> ese cargador, `db:migrate` diría que migró y lo habría hecho sobre `orta.db`
+> mientras la base remota se queda vacía.
+
+### 1. Base de datos en Turso
+
+1. Crea la base en [turso.tech/app](https://turso.tech/app). Con la CLI sería
+   `turso db create orta`, pero en Windows la CLI pide WSL y el panel hace lo mismo.
+2. Copia la URL de conexión (`libsql://orta-tuorg.turso.io`) y genera un token.
+3. Ponlas en tu `.env` local:
+
+```bash
+DATABASE_URL=libsql://orta-tuorg.turso.io
+DATABASE_AUTH_TOKEN=eyJhbGci...
+```
+
+4. Crea el esquema y siembra el catálogo **en la base remota**:
+
+```bash
+npm run db:migrate && npm run db:seed && npm run db:probar
+```
+
+`db:probar` es el que confirma que quedó bien: dice a dónde apunta, si responde,
+qué tablas faltan y con qué comando arreglarlo. Es el paso que separa un
+despliegue que funciona de uno que responde 500 en la primera consulta.
+
+5. Las mismas dos variables en **Vercel > Settings > Environment Variables**. El
+   token va solo en el servidor: nunca en una variable `PUBLIC_`.
+
+En cuanto `DATABASE_URL` deja de empezar por `file:`, el modo demo se apaga solo y
+[src/lib/sqlite.ts](src/lib/sqlite.ts) carga el driver `libsql/web`, que habla con
+Turso por HTTP y no arrastra el binario nativo que el empaquetador de Vercel no
+sabe copiar dentro de la función.
+
+### 2. Correo con Resend
+
+1. Crea la cuenta en [resend.com](https://resend.com).
+2. **Domains > Add Domain** y pon los registros DNS donde tengas el dominio. Este
+   paso no se salta: sin dominio verificado solo puedes usar `onboarding@resend.dev`,
+   que entrega **únicamente** a la dirección con la que abriste la cuenta. Sirve
+   para probar, no para clientes.
+3. **API Keys > Create API Key**.
+4. En `.env` y en Vercel:
+
+```bash
+RESEND_API_KEY=re_...
+CORREO_REMITENTE=Orta Novedades <hola@tudominio.mx>
+```
+
+5. Compruébalo sin registrar a nadie:
+
+```bash
+npm run correo:probar -- tu@correo.mx
+```
+
+Manda la plantilla real de verificación por el mismo camino que el sitio, y si
+Resend la rechaza traduce el error: clave inválida (401), dominio sin verificar
+(403) o remitente mal formado (422). Desde dentro del sitio esos tres se ven
+igual — "no llegó el correo" — porque Better Auth los convierte en un 500 genérico
+y el motivo real se queda en los logs de la función.
+
+Con las dos variables puestas, la verificación de correo al registrarse se activa
+sola ([src/lib/auth.ts](src/lib/auth.ts)). Los valores de ejemplo de `.env.example`
+no cuentan: copiar el archivo y no rellenarlo deja el sitio como si no hubiera
+proveedor, en vez de exigir un correo que nunca saldría.
+
+### 3. Lo demás del entorno
+
+`PUBLIC_SITE_URL` con el dominio real (si no, los enlaces de los correos salen con
+la URL del despliegue, que caduca al publicar el siguiente), un
+`BETTER_AUTH_SECRET` nuevo y las claves de Stripe de producción.
+
+---
+
 ## Antes de publicar
 
-- [ ] Definir `RESEND_API_KEY` y `CORREO_REMITENTE` con un dominio verificado en
-      Resend. Sin ellas no salen los correos y la verificación de cuenta queda
-      desactivada (el sitio lo avisa en consola al arrancar).
-- [ ] Crear una base en Turso y apuntar `DATABASE_URL` ahí.
+- [ ] Base en Turso y correo en Resend — pasos en [Publicar](#publicar-turso-y-resend).
+      Sin ellos el sitio se publica en modo demo: catálogo en memoria, sin correos
+      y sin verificación de cuenta. Confírmalo con `npm run db:probar` y
+      `npm run correo:probar`.
 - [ ] Registrar el webhook de producción y verificar el dominio para Apple Pay.
 - [ ] Cambiar la cotización de `src/lib/shipping.ts` por la API de la paquetería.
 - [ ] Crear las rutas que aún enlazan a 404: `/nosotros`, `/envios`,

@@ -17,14 +17,34 @@ import type { Pedido, Sucursal } from './types';
 
 const API = 'https://api.resend.com/emails';
 
-/** true cuando hay proveedor de correo listo para enviar. */
+/*
+ * Los valores de ejemplo de .env.example no cuentan como configuración.
+ *
+ * Copiar el archivo y no rellenarlo deja RESEND_API_KEY con una clave falsa:
+ * el sitio creería que puede mandar correos, exigiría verificar la cuenta y
+ * Resend contestaría "API key is invalid" — con el usuario esperando para
+ * siempre un correo que no salió. Con esta comprobación el sitio se comporta
+ * como si no hubiera proveedor: la cuenta sirve desde el alta y el aviso de
+ * consola dice qué falta.
+ */
+function esMarcadorDePosicion(valor: string): boolean {
+  return /x{8,}/i.test(valor) || /tudominio\.mx|ejemplo\.com|cambia-esto/i.test(valor);
+}
+
+function valorReal(clave: string): string | undefined {
+  const valor = env(clave)?.trim();
+  if (!valor || esMarcadorDePosicion(valor)) return undefined;
+  return valor;
+}
+
+/** true cuando hay proveedor de correo listo para enviar de verdad. */
 export function correoConfigurado(): boolean {
-  return Boolean(env('RESEND_API_KEY') && remitente());
+  return Boolean(valorReal('RESEND_API_KEY') && remitente());
 }
 
 /** Remitente verificado en Resend: "Orta Novedades <hola@tudominio.mx>". */
 function remitente(): string | undefined {
-  return env('CORREO_REMITENTE');
+  return valorReal('CORREO_REMITENTE');
 }
 
 export interface Correo {
@@ -46,13 +66,14 @@ export type ResultadoCorreo =
  * poder decírselo al usuario en vez de dejarlo esperando un correo que no salió.
  */
 export async function enviarCorreo(correo: Correo): Promise<ResultadoCorreo> {
-  const clave = env('RESEND_API_KEY');
+  const clave = valorReal('RESEND_API_KEY');
   const de = remitente();
 
   if (!clave || !de) {
     const detalle =
-      'Falta RESEND_API_KEY o CORREO_REMITENTE. Defínelas en .env para desarrollo, ' +
-      'o en las variables de entorno del proyecto en Vercel para el sitio publicado.';
+      'Falta RESEND_API_KEY o CORREO_REMITENTE, o siguen con el valor de ejemplo. ' +
+      'Defínelas en .env para desarrollo, o en las variables de entorno del ' +
+      'proyecto en Vercel para el sitio publicado.';
     console.warn(`[orta] Correo no enviado a ${correo.para}: ${detalle}`);
     return { ok: false, motivo: 'sin_configurar', detalle };
   }

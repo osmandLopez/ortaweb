@@ -65,7 +65,7 @@ export default function FormularioEntrar({ destino, conVerificacion = true }: Pr
         redirectTo: '/restablecer',
       });
       setOcupado(false);
-      if (err) return setError(mensajeDeError(err.code, err.message));
+      if (err) return setError(mensajeDeError(err));
       // No revelamos si el correo existe: mismo mensaje en ambos casos.
       return setAviso('Si hay una cuenta con ese correo, ya salió el enlace para restablecerla.');
     }
@@ -79,7 +79,7 @@ export default function FormularioEntrar({ destino, conVerificacion = true }: Pr
         callbackURL: '/verificar?estado=ok',
       });
       setOcupado(false);
-      if (err) return setError(mensajeDeError(err.code, err.message));
+      if (err) return setError(mensajeDeError(err));
 
       /* Con verificación activa el alta no abre sesión: hay que confirmar el
          correo primero. Sin proveedor de correo, la cuenta sirve desde ya. */
@@ -92,7 +92,7 @@ export default function FormularioEntrar({ destino, conVerificacion = true }: Pr
     if (err) {
       setOcupado(false);
       if (err.code === 'EMAIL_NOT_VERIFIED') return setPendienteDeVerificar(email.trim());
-      return setError(mensajeDeError(err.code, err.message));
+      return setError(mensajeDeError(err));
     }
 
     // Recarga completa a propósito: el servidor tiene que volver a renderizar
@@ -236,7 +236,7 @@ function PantallaVerificacion({ email, alVolver }: { email: string; alVolver: ()
     });
     if (err) {
       setEstado('listo');
-      return setError(mensajeDeError(err.code, err.message));
+      return setError(mensajeDeError(err));
     }
     setEstado('enviado');
   };

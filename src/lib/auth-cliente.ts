@@ -6,8 +6,17 @@ import { createAuthClient } from 'better-auth/client';
  */
 export const authCliente = createAuthClient();
 
+/** Lo que devuelve el cliente de Better Auth cuando algo sale mal. */
+export interface ErrorDeAuth {
+  code?: string;
+  message?: string;
+  status?: number;
+  statusText?: string;
+}
+
 /** Traduce los errores de Better Auth al idioma y al tono de la tienda. */
-export function mensajeDeError(codigo: string | undefined, texto: string | undefined): string {
+export function mensajeDeError(error: ErrorDeAuth | null | undefined): string {
+  const codigo = error?.code;
   switch (codigo) {
     case 'INVALID_EMAIL_OR_PASSWORD':
       return 'El correo o la contraseña no coinciden.';
@@ -36,7 +45,13 @@ export function mensajeDeError(codigo: string | undefined, texto: string | undef
          falta el dominio en PUBLIC_SITE_URL o en los orígenes confiables. */
       return 'El servidor no reconoce este dominio. Avísanos para revisarlo.';
     default:
-      return texto || 'No pudimos completar la operación. Inténtalo de nuevo.';
+      if (error?.message) return error.message;
+      /* Sin código ni mensaje casi siempre es un fallo del servidor que no llegó
+         a convertirse en respuesta de Better Auth. Enseñar el número hace que un
+         reporte del cliente sirva para algo en vez de quedarse en "no funciona". */
+      return error?.status
+        ? `No pudimos completar la operación (error ${error.status}). Inténtalo de nuevo o avísanos.`
+        : 'No pudimos completar la operación. Revisa tu conexión e inténtalo de nuevo.';
   }
 }
 

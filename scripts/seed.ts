@@ -5,6 +5,7 @@
  *   npm run db:seed          siembra si está vacío
  *   npm run db:seed -- --force   borra y vuelve a sembrar
  */
+import './entorno-local';
 import { orm } from '../src/lib/sqlite';
 import * as t from '../src/lib/schema';
 import { categorias, productos, sucursales } from '../src/data/seed';

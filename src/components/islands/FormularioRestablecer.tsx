@@ -27,7 +27,7 @@ export default function FormularioRestablecer({ token }: Props) {
     setOcupado(true);
     const { error: err } = await authCliente.resetPassword({ newPassword: clave, token });
     setOcupado(false);
-    if (err) return setError(mensajeDeError(err.code, err.message));
+    if (err) return setError(mensajeDeError(err));
     setListo(true);
   };
 

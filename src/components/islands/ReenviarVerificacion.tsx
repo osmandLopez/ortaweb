@@ -22,7 +22,7 @@ export default function ReenviarVerificacion() {
     });
     if (err) {
       setEstado('listo');
-      return setError(mensajeDeError(err.code, err.message));
+      return setError(mensajeDeError(err));
     }
     setEstado('enviado');
   };

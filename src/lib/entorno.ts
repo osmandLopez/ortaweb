@@ -116,8 +116,20 @@ export function origenesConfiables(): string[] {
   return [...lista];
 }
 
-/** A dónde apunta la base. En local, el archivo SQLite de desarrollo. */
-export const urlBaseDeDatos = env('DATABASE_URL') ?? 'file:./orta.db';
+/*
+ * A dónde apunta la base. En local, el archivo SQLite de desarrollo.
+ *
+ * TURSO_DATABASE_URL es el nombre que usa la integración de Turso en el
+ * Marketplace de Vercel, que las inyecta sola al conectar la base. Se acepta
+ * como alias para que ese camino funcione sin duplicar nada a mano; DATABASE_URL
+ * manda si están las dos.
+ */
+export const urlBaseDeDatos = env('DATABASE_URL') ?? env('TURSO_DATABASE_URL') ?? 'file:./orta.db';
+
+/** El token de la base remota, con el mismo alias que la URL. */
+export function tokenBaseDeDatos(): string | undefined {
+  return env('DATABASE_AUTH_TOKEN') ?? env('TURSO_AUTH_TOKEN');
+}
 
 /**
  * Modo demo: el sitio se sirve con el catálogo de muestra en memoria.

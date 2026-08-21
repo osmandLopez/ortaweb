@@ -1,3 +1,6 @@
+/* Primero el .env: drizzle-kit arranca con el entorno del sistema, y sin esto
+   `db:migrate` apuntaría al archivo local aunque DATABASE_URL diga Turso. */
+import './scripts/entorno-local';
 import type { Config } from 'drizzle-kit';
 
 export default {

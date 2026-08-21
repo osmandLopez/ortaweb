@@ -14,6 +14,9 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "tsx scripts/seed.ts --force",
+    "db:probar": "tsx scripts/probar-base.ts",
+    "correo:probar": "tsx scripts/probar-correo.ts",
+    "admin": "tsx scripts/hacer-admin.ts",
     "stripe:listen": "stripe listen --forward-to localhost:4321/api/webhooks/stripe"
   },
   "dependencies": {
