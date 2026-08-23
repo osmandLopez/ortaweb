@@ -270,17 +270,10 @@ export const sqlite: Repositorio = {
     return r.rowsAffected > 0;
   },
 
-  async marcarPagado(sessionId, monto, paymentIntentId = null) {
+  async marcarPagado({ sessionId, monto, paymentIntentId = null, direccion = null }) {
     return orm.transaction(async (tx) => {
       const [f] = await tx.select().from(t.pedidos).where(eq(t.pedidos.stripeSessionId, sessionId)).limit(1);
       if (!f) return null;
-
-      /* Idempotencia: si el pedido ya se confirmó, esto es un evento repetido
-         de Stripe. Se devuelve tal cual, sin volver a tocar el inventario ni
-         disparar el correo de confirmación. */
-      if (f.estado !== 'pendiente_pago') {
-        return { pedido: await armarPedido(f, tx), primeraVez: false };
-      }
 
       const cambios = {
         pagado: monto,
@@ -288,7 +281,48 @@ export const sqlite: Repositorio = {
         stripePaymentIntentId: paymentIntentId,
         pagadoEn: ahora(),
       };
-      await tx.update(t.pedidos).set(cambios).where(eq(t.pedidos.id, f.id));
+
+      /* La condición `estado = 'pendiente_pago'` viaja DENTRO del UPDATE a
+         propósito. Comprobarla antes con un SELECT deja una rendija entre leer y
+         escribir, y por esa rendija pasan justo los dos caminos que confirman el
+         mismo pedido casi a la vez: el webhook de Stripe y la página de retorno.
+         Así solo uno de los dos ve rowsAffected > 0, y el otro sabe que llegó
+         tarde sin haber tocado nada. */
+      const r = await tx
+        .update(t.pedidos)
+        .set(cambios)
+        .where(and(eq(t.pedidos.id, f.id), eq(t.pedidos.estado, 'pendiente_pago')));
+
+      if (r.rowsAffected === 0) {
+        // Ya estaba confirmado: evento repetido de Stripe, o el otro camino ganó.
+        const [actual] = await tx.select().from(t.pedidos).where(eq(t.pedidos.id, f.id)).limit(1);
+        return { pedido: await armarPedido(actual ?? f, tx), primeraVez: false };
+      }
+
+      /* De aquí abajo solo pasa quien ganó la carrera, así que nada se repite:
+         ni el descuento de inventario ni la dirección. */
+      let direccionId: string | null = f.direccionId;
+      if (direccion) {
+        direccionId = id();
+        await tx.insert(t.direcciones).values({
+          id: direccionId,
+          /* Sin dueño a propósito: esto es la foto de a dónde se mandó ESTE
+             pedido, no una entrada de la libreta del cliente. Colgarla del
+             usuario haría que borrar la cuenta (cascada) se llevara por delante
+             el destino de una entrega ya hecha. */
+          usuarioId: null,
+          nombre: direccion.nombre,
+          calle: direccion.calle,
+          numero: direccion.numero,
+          colonia: direccion.colonia,
+          ciudad: direccion.ciudad,
+          estado: direccion.estado,
+          cp: direccion.cp,
+          telefono: direccion.telefono,
+          referencias: direccion.referencias ?? null,
+        });
+        await tx.update(t.pedidos).set({ direccionId }).where(eq(t.pedidos.id, f.id));
+      }
 
       // El inventario se descuenta al confirmar el cobro, nunca antes.
       const items = await tx.select().from(t.pedidoItems).where(eq(t.pedidoItems.pedidoId, f.id));
@@ -299,8 +333,24 @@ export const sqlite: Repositorio = {
           .where(eq(t.productos.id, i.productoId));
       }
 
-      return { pedido: await armarPedido({ ...f, ...cambios }, tx), primeraVez: true };
+      return { pedido: await armarPedido({ ...f, ...cambios, direccionId }, tx), primeraVez: true };
     });
+  },
+
+  async cancelarPedidoPorSesion(sessionId) {
+    const [f] = await orm.select().from(t.pedidos).where(eq(t.pedidos.stripeSessionId, sessionId)).limit(1);
+    if (!f) return null;
+
+    /* Mismo candado que en marcarPagado, y por el mismo motivo: un pedido ya
+       cobrado no se puede cancelar aunque llegue tarde el aviso de caducidad de
+       la sesión. */
+    const r = await orm
+      .update(t.pedidos)
+      .set({ estado: 'cancelado' })
+      .where(and(eq(t.pedidos.id, f.id), eq(t.pedidos.estado, 'pendiente_pago')));
+    if (r.rowsAffected === 0) return null;
+
+    return armarPedido({ ...f, estado: 'cancelado' as const });
   },
 
   async registrarEvento(eventoId, tipo) {
@@ -311,6 +361,10 @@ export const sqlite: Repositorio = {
       if (esUnico(e)) return false; // Stripe lo está reintentando
       throw e;
     }
+  },
+
+  async olvidarEvento(eventoId) {
+    await orm.delete(t.eventosStripe).where(eq(t.eventosStripe.id, eventoId));
   },
 };
 
@@ -324,6 +378,13 @@ async function armarPedido(f: FilaPedido, ejecutor: Ejecutor = orm): Promise<Ped
     .select()
     .from(t.pedidoItems)
     .where(eq(t.pedidoItems.pedidoId, f.id));
+
+  /* La dirección es la que capturó Stripe al pagar, no la que escribió nadie en
+     el sitio: sin ella el pedido no se puede empacar. Solo la tienen los pedidos
+     con envío ya confirmados. */
+  const [dir] = f.direccionId
+    ? await ejecutor.select().from(t.direcciones).where(eq(t.direcciones.id, f.direccionId)).limit(1)
+    : [];
 
   return {
     id: f.id,
@@ -346,7 +407,20 @@ async function armarPedido(f: FilaPedido, ejecutor: Ejecutor = orm): Promise<Ped
     pagado: f.pagado,
     metodoEntrega: f.metodoEntrega,
     sucursalId: f.sucursalId,
-    direccion: null,
+    direccion: dir
+      ? {
+          id: dir.id,
+          nombre: dir.nombre,
+          calle: dir.calle,
+          numero: dir.numero,
+          colonia: dir.colonia,
+          ciudad: dir.ciudad,
+          estado: dir.estado,
+          cp: dir.cp,
+          telefono: dir.telefono,
+          referencias: dir.referencias ?? undefined,
+        }
+      : null,
     estado: f.estado,
     stripeSessionId: f.stripeSessionId,
     stripePaymentIntentId: f.stripePaymentIntentId,

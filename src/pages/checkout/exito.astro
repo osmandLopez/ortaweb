@@ -2,17 +2,68 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { db } from '@/lib/db';
 import { precio } from '@/lib/money';
+import { cumplirPedido } from '@/lib/cumplimiento';
+import type { Pedido } from '@/lib/types';
 
 /*
- * Página de retorno de Stripe. Es informativa: NO confirma el cobro.
- * Quien mueve el estado del pedido es el webhook. Si el usuario llega antes
- * de que el evento aterrice, mostramos "estamos confirmando".
+ * Página de retorno de Stripe.
+ *
+ * Además de enseñar la nota, confirma el pedido si el webhook todavía no ha
+ * llegado: el cliente aterriza aquí un instante después de pagar y el evento
+ * puede tardar. Sin esto, la primera pantalla tras pagar decía "estamos
+ * confirmando" y ahí se quedaba hasta que el webhook aterrizara —o para
+ * siempre, si aún no había webhook configurado.
+ *
+ * Lo que NO se hace es creerle a la URL. El session_id llega por la barra de
+ * direcciones, así que el estado del cobro se relee de Stripe (dentro de
+ * cumplirPedido) y el candado contra duplicados vive en la base: si el webhook
+ * ya confirmó este pedido, aquí no se repite ni el correo ni el inventario.
  */
 const sessionId = Astro.url.searchParams.get('session_id');
-const pedido = sessionId ? await db.obtenerPedidoPorSesion(sessionId) : null;
-const confirmado = pedido && pedido.estado !== 'pendiente_pago';
+const usuario = Astro.locals.usuario;
+
+let pedido: Pedido | null = null;
+let cobro: 'confirmado' | 'procesando' | 'sin_pagar' = 'procesando';
+
+if (sessionId) {
+  try {
+    const resultado = await cumplirPedido(sessionId);
+    if (resultado.estado === 'cumplido' || resultado.estado === 'ya_cumplido') {
+      pedido = resultado.pedido;
+      cobro = 'confirmado';
+    } else if (resultado.estado === 'sin_pagar') {
+      pedido = resultado.pedido;
+      cobro = pedido?.estado === 'cancelado' ? 'sin_pagar' : 'procesando';
+    }
+  } catch (e) {
+    /* Stripe caído, clave mal puesta, o un session_id que no existe. La nota se
+       intenta enseñar con lo que haya en la base; el webhook confirmará el
+       pedido cuando pueda. */
+    console.error(`[orta] No se pudo confirmar la sesión ${sessionId}:`, (e as Error).message);
+    pedido = await db.obtenerPedidoPorSesion(sessionId).catch(() => null);
+    if (pedido && pedido.estado !== 'pendiente_pago' && pedido.estado !== 'cancelado') {
+      cobro = 'confirmado';
+    }
+  }
+}
+
+/* Un pedido de una cuenta solo lo ve su dueño (y la tienda). Los de invitado no
+   tienen dueño: ahí el propio session_id, que es largo e impredecible, hace de
+   llave —es el mismo modelo con el que Stripe comparte sus recibos. */
+if (pedido?.usuarioId && pedido.usuarioId !== usuario?.id && usuario?.rol !== 'admin') {
+  pedido = null;
+}
+
+const confirmado = cobro === 'confirmado';
 const sucursales = await db.listarSucursales();
-const sucursal = pedido?.sucursalId ? sucursales.find((s) => s.id === pedido.sucursalId) : null;
+const sucursal = pedido?.sucursalId ? sucursales.find((s) => s.id === pedido?.sucursalId) : null;
+const direccion = pedido?.direccion ?? null;
+
+const TITULARES = {
+  confirmado: 'Pago confirmado',
+  procesando: 'Estamos confirmando tu pago',
+  sin_pagar: 'El pago no se completó',
+} as const;
 ---
 
 <BaseLayout titulo="Pedido recibido" fondo="mostrador">
@@ -20,11 +71,15 @@ const sucursal = pedido?.sucursalId ? sucursales.find((s) => s.id === pedido.suc
     <div class="mx-auto max-w-xl">
       <div class="nota shadow-mostrador" style="--nota-muesca: #F7F7F8">
         <div class="px-6 pt-7">
-          <p class="etiqueta text-cielo-600">
-            {confirmado ? 'Pago confirmado' : 'Estamos confirmando tu pago'}
+          <p class={`etiqueta ${cobro === 'sin_pagar' || !pedido ? 'text-oro-700' : 'text-cielo-600'}`}>
+            {pedido ? TITULARES[cobro] : 'Pedido no encontrado'}
           </p>
           <h1 class="rotulo rotulo-negro mt-3 text-rotulo-sm text-tinta-900">
-            Gracias por tu compra
+            {!pedido
+              ? 'No dimos con ese pedido'
+              : cobro === 'sin_pagar'
+              ? 'Tu carrito sigue completo'
+              : 'Gracias por tu compra'}
           </h1>
           {pedido && (
             <p class="mt-2 font-nota text-xs text-tinta-500">Folio {pedido.folio}</p>
@@ -66,16 +121,33 @@ const sucursal = pedido?.sucursalId ? sucursales.find((s) => s.id === pedido.suc
                 </div>
               </dl>
 
+              {direccion && (
+                <div class="mt-5 rounded-md border border-dashed border-tinta-300 px-4 py-3">
+                  <p class="etiqueta text-tinta-400">Enviamos a</p>
+                  <p class="mt-1.5 text-sm leading-relaxed text-tinta-700">
+                    {direccion.nombre}<br />
+                    {direccion.calle}{direccion.colonia ? `, ${direccion.colonia}` : ''}<br />
+                    {direccion.ciudad}, {direccion.estado} {direccion.cp}
+                  </p>
+                </div>
+              )}
+
               <p class="mt-5 text-sm leading-relaxed text-tinta-600">
-                {!confirmado
-                  ? 'En cuanto Stripe confirme el cobro te llega el correo con el detalle de tu pedido.'
+                {cobro === 'sin_pagar'
+                  ? 'No se hizo ningún cargo. Puedes volver a intentarlo cuando quieras.'
+                  : !confirmado
+                  ? 'En cuanto Stripe confirme el cobro te llega el correo con el detalle de tu pedido. Puedes cerrar esta página: el pedido sigue su curso.'
                   : sucursal
                   ? `Te mandamos la confirmación por correo. Te avisamos cuando esté listo en ${sucursal.nombre}. ${sucursal.horario}.`
                   : 'Te mandamos la confirmación por correo y la guía de rastreo en cuanto salga de bodega.'}
               </p>
 
               <div class="mt-6 flex flex-wrap gap-3">
-                <a href="/tienda" class="btn-primario">Seguir comprando</a>
+                {cobro === 'sin_pagar' ? (
+                  <a href="/checkout" class="btn-primario">Volver a pagar</a>
+                ) : (
+                  <a href="/tienda" class="btn-primario">Seguir comprando</a>
+                )}
                 {pedido.usuarioId && <a href="/cuenta" class="btn-linea">Ver mis pedidos</a>}
               </div>
             </div>
@@ -93,8 +165,15 @@ const sucursal = pedido?.sucursalId ? sucursales.find((s) => s.id === pedido.suc
     </div>
   </div>
 
+  <!-- Astro recoge los <script> en el build y los sirve siempre, así que la
+       decisión de vaciar el carrito viaja en el DOM, no dentro del script. -->
+  <div id="estado-pago" data-vaciar={pedido && cobro !== 'sin_pagar' ? '1' : '0'} hidden></div>
+
   <script>
-    // El carrito se vacía solo al aterrizar en la página de éxito.
-    import('@/stores/cart').then(({ vaciar }) => vaciar());
+    // El carrito se vacía solo si el pedido llegó a existir. Si el cliente se
+    // volvió sin pagar, lo que eligió tiene que seguir ahí cuando reintente.
+    if (document.getElementById('estado-pago')?.dataset.vaciar === '1') {
+      import('@/stores/cart').then(({ vaciar }) => vaciar());
+    }
   </script>
 </BaseLayout>

@@ -1,0 +1,172 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { db } from '@/lib/db';
+import { precio } from '@/lib/money';
+import { enModoPrueba } from '@/lib/stripe';
+
+/*
+ * Lista de pedidos del panel.
+ *
+ * El menú del panel y el resumen ya enlazaban aquí, pero la página no existía:
+ * "Pedidos" y "Ver todo" daban 404. Es la pantalla desde la que se empaca, así
+ * que enseña lo que hace falta para eso —a dónde va, qué lleva, quién lo pidió—
+ * y el enlace al cobro en Stripe para conciliar o reembolsar.
+ */
+const pedidos = await db.listarPedidos(200);
+const sucursales = await db.listarSucursales();
+
+/* En modo Test los cobros viven en otra sección del panel de Stripe: la misma
+   URL sin /test/ enseña "no such payment" y parece que el cobro se perdió. */
+const panelStripe = enModoPrueba()
+  ? 'https://dashboard.stripe.com/test/payments/'
+  : 'https://dashboard.stripe.com/payments/';
+
+const ETIQUETA_ESTADO: Record<string, string> = {
+  pendiente_pago: 'Pendiente de pago',
+  pagado: 'Pagado',
+  en_preparacion: 'En preparación',
+  enviado: 'Enviado',
+  listo_para_recoger: 'Listo para recoger',
+  entregado: 'Entregado',
+  cancelado: 'Cancelado',
+};
+
+const COLOR_ESTADO: Record<string, string> = {
+  pendiente_pago: 'bg-oro-100 text-oro-800',
+  pagado: 'bg-cielo-100 text-cielo-800',
+  en_preparacion: 'bg-cielo-100 text-cielo-800',
+  enviado: 'bg-cielo-100 text-cielo-800',
+  listo_para_recoger: 'bg-cielo-100 text-cielo-800',
+  entregado: 'bg-tinta-100 text-tinta-700',
+  cancelado: 'bg-tinta-100 text-tinta-500',
+};
+
+const fecha = (iso: string) =>
+  new Date(iso).toLocaleString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+const porCobrar = pedidos.filter((p) => p.estado === 'pendiente_pago').length;
+const cobrado = pedidos.reduce((n, p) => n + p.pagado, 0);
+---
+
+<AdminLayout titulo="Pedidos" activo="/admin/pedidos">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="rotulo rotulo-negro text-rotulo-sm text-tinta-900">Pedidos</h1>
+      <p class="mt-2 text-sm text-tinta-600">
+        {pedidos.length} en total · {precio(cobrado)} cobrado · {porCobrar} sin confirmar
+      </p>
+    </div>
+    <p class="font-nota text-[11px] text-tinta-400">
+      {enModoPrueba() ? 'Stripe en modo Prueba' : 'Stripe en modo Producción'}
+    </p>
+  </div>
+
+  {pedidos.length === 0 ? (
+    <p class="nota-seccion mt-8 text-sm text-tinta-500">
+      Todavía no hay pedidos. Aparecerán aquí en cuanto Stripe confirme el primer cobro.
+    </p>
+  ) : (
+    <ul class="mt-8 space-y-4">
+      {pedidos.map((p) => {
+        const sucursal = p.sucursalId ? sucursales.find((s) => s.id === p.sucursalId) : null;
+        return (
+          <li class="nota-seccion">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="flex items-center gap-3">
+                  <span class="font-nota text-sm font-bold text-tinta-900">{p.folio}</span>
+                  <span class:list={['insignia', COLOR_ESTADO[p.estado] ?? 'bg-tinta-100 text-tinta-700']}>
+                    {ETIQUETA_ESTADO[p.estado] ?? p.estado}
+                  </span>
+                </div>
+                <p class="mt-1.5 text-sm text-tinta-700">{p.emailContacto}</p>
+                <p class="font-nota text-[11px] text-tinta-400">
+                  {fecha(p.pagadoEn ?? p.creadoEn)}
+                  {p.usuarioId ? ' · cliente con cuenta' : ' · invitado'}
+                </p>
+              </div>
+
+              <div class="text-right">
+                {/* En un pedido sin cobrar, `pagado` vale 0: enseñarlo sería
+                    decir que la nota costó cero. Se enseña el total y se avisa
+                    de que no está cobrado. */}
+                <p
+                  class:list={[
+                    'font-nota text-lg font-bold tabular-nums',
+                    p.pagado > 0 ? 'text-tinta-900' : 'text-tinta-400',
+                  ]}
+                >
+                  {precio(p.pagado > 0 ? p.pagado : p.total)}
+                </p>
+                {p.pagado === 0 && (
+                  <p class="font-nota text-[10px] uppercase tracking-[0.12em] text-tinta-400">
+                    sin cobrar
+                  </p>
+                )}
+                {p.stripePaymentIntentId && (
+                  <a
+                    href={`${panelStripe}${p.stripePaymentIntentId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="font-nota text-[11px] text-cielo-600 underline"
+                  >
+                    Ver cobro en Stripe
+                  </a>
+                )}
+              </div>
+            </div>
+
+            <div class="mt-4 grid gap-4 border-t border-dashed border-tinta-300 pt-4 sm:grid-cols-2">
+              <div>
+                <p class="etiqueta text-tinta-400">Lleva</p>
+                <ul class="mt-2 space-y-1">
+                  {p.items.map((i) => (
+                    <li class="flex justify-between gap-3 text-sm">
+                      <span class="text-tinta-700">
+                        {i.nombre}
+                        <span class="font-nota text-[11px] text-tinta-400"> ×{i.cantidad}</span>
+                      </span>
+                      <span class="font-nota shrink-0 tabular-nums text-tinta-600">
+                        {precio(i.precio * i.cantidad)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <p class="etiqueta text-tinta-400">
+                  {p.metodoEntrega === 'pickup' ? 'Recoge en' : 'Enviar a'}
+                </p>
+                {p.metodoEntrega === 'pickup' ? (
+                  <p class="mt-2 text-sm leading-relaxed text-tinta-700">
+                    {sucursal ? `${sucursal.nombre} · ${sucursal.direccion}` : 'Sucursal no encontrada'}
+                  </p>
+                ) : p.direccion ? (
+                  <p class="mt-2 text-sm leading-relaxed text-tinta-700">
+                    {p.direccion.nombre}<br />
+                    {p.direccion.calle}{p.direccion.colonia ? `, ${p.direccion.colonia}` : ''}<br />
+                    {p.direccion.ciudad}, {p.direccion.estado} {p.direccion.cp}
+                    {p.direccion.telefono && <><br />Tel. {p.direccion.telefono}</>}
+                  </p>
+                ) : (
+                  <p class="mt-2 text-sm text-tinta-500">
+                    {p.estado === 'pendiente_pago'
+                      ? 'Stripe la captura al pagar.'
+                      : 'Sin dirección registrada. Consúltala en el cobro de Stripe.'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  )}
+</AdminLayout>

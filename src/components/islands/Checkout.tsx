@@ -37,49 +37,74 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
     setError('');
     if (!/^\d{5}$/.test(cp)) return setError('El código postal son 5 dígitos.');
     setCotizando(true);
-    const res = await fetch('/api/shipping/quote', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ cp, subtotal: mercancia }),
-    });
-    setCotizando(false);
-    if (!res.ok) return setError((await res.json()).error);
-    const { opciones: nuevas } = await res.json();
-    setOpciones(nuevas);
-    setOpcionId(nuevas[0]?.id ?? '');
+
+    /* El try/finally no es adorno: si se cae la red, `fetch` no devuelve un
+       error, lanza. Sin esto el "Cotizando…" se quedaba puesto y el botón
+       muerto hasta recargar la página. */
+    try {
+      const res = await fetch('/api/shipping/quote', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ cp, subtotal: mercancia }),
+      });
+      const cuerpo = await res.json().catch(() => null);
+
+      if (!res.ok) return setError(cuerpo?.error ?? 'No pudimos cotizar el envío. Inténtalo de nuevo.');
+
+      setOpciones(cuerpo.opciones);
+      setOpcionId(cuerpo.opciones[0]?.id ?? '');
+    } catch {
+      setError('No pudimos cotizar el envío. Revisa tu conexión e inténtalo de nuevo.');
+    } finally {
+      setCotizando(false);
+    }
   };
 
   const pagar = async (e: Event) => {
     e.preventDefault();
+    // Segundo cerrojo contra el doble clic: el botón ya está deshabilitado
+    // mientras se envía, pero un Enter repetido en el formulario se cuela igual.
+    if (enviando) return;
+
     setError('');
     if (!correoValido(email)) return setError('Escribe un correo válido: ahí te llega la confirmación.');
     if (metodo === 'envio' && !opcion) return setError('Cotiza el envío con tu código postal.');
     if (metodo === 'pickup' && !sucursalId) return setError('Elige la sucursal donde vas a recoger.');
 
     setEnviando(true);
-    const res = await fetch('/api/checkout', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        items: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad })),
-        email,
-        metodoEntrega: metodo,
-        cp: metodo === 'envio' ? cp : undefined,
-        opcionEnvioId: opcionId || undefined,
-        sucursalId: metodo === 'pickup' ? sucursalId : undefined,
-      }),
-    });
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad })),
+          email,
+          metodoEntrega: metodo,
+          cp: metodo === 'envio' ? cp : undefined,
+          opcionEnvioId: opcionId || undefined,
+          sucursalId: metodo === 'pickup' ? sucursalId : undefined,
+        }),
+      });
 
-    // El cuerpo puede no ser JSON si algo revienta antes de llegar al endpoint.
-    const cuerpo = await res.json().catch(() => null);
+      // El cuerpo puede no ser JSON si algo revienta antes de llegar al endpoint.
+      const cuerpo = await res.json().catch(() => null);
 
-    if (!res.ok || !cuerpo?.url) {
+      if (!res.ok || !cuerpo?.url) {
+        setEnviando(false);
+        return setError(cuerpo?.error ?? 'No se pudo iniciar el pago. Inténtalo de nuevo.');
+      }
+
+      /* Stripe Checkout aloja el formulario de tarjeta: ningún dato de pago toca
+         nuestro servidor. `enviando` se queda en true a propósito —la pestaña
+         está a punto de irse a Stripe y reactivar el botón solo invitaría a un
+         segundo clic durante la navegación. */
+      window.location.href = cuerpo.url;
+    } catch {
+      /* La petición ni siquiera salió (sin red, o el servidor no respondió).
+         Aquí no hay cobro posible, así que se puede reintentar sin miedo. */
       setEnviando(false);
-      return setError(cuerpo?.error ?? 'No se pudo iniciar el pago. Inténtalo de nuevo.');
+      setError('No pudimos conectar con el pago. Revisa tu conexión e inténtalo de nuevo.');
     }
-    // Stripe Checkout aloja el formulario de tarjeta: ningún dato de pago
-    // toca nuestro servidor.
-    window.location.href = cuerpo.url;
   };
 
   /* El servidor no conoce el carrito, así que este bloque es también lo que se

@@ -176,17 +176,18 @@ export const memoria: Repositorio = {
     return false;
   },
 
-  async marcarPagado(sessionId, monto, paymentIntentId = null) {
+  async marcarPagado({ sessionId, monto, paymentIntentId = null, direccion = null }) {
     const p = pedidos.find((x) => x.stripeSessionId === sessionId);
     if (!p) return null;
 
-    // Evento repetido de Stripe: el pedido ya está confirmado, no se toca nada.
+    // Evento repetido de Stripe, o el otro camino de confirmación llegó primero.
     if (p.estado !== 'pendiente_pago') return { pedido: p, primeraVez: false };
 
     p.pagado = monto;
     p.estado = 'pagado';
     p.stripePaymentIntentId = paymentIntentId;
     p.pagadoEn = ahora();
+    if (direccion) p.direccion = { id: id(), ...direccion };
 
     // El inventario se descuenta al confirmar el cobro, nunca antes.
     for (const i of p.items) {
@@ -197,9 +198,21 @@ export const memoria: Repositorio = {
     return { pedido: p, primeraVez: true };
   },
 
+  async cancelarPedidoPorSesion(sessionId) {
+    const p = pedidos.find((x) => x.stripeSessionId === sessionId);
+    // Un pedido ya cobrado no se cancela aunque llegue tarde el aviso.
+    if (!p || p.estado !== 'pendiente_pago') return null;
+    p.estado = 'cancelado';
+    return p;
+  },
+
   async registrarEvento(eventoId) {
     if (eventos.has(eventoId)) return false; // Stripe lo está reintentando
     eventos.add(eventoId);
     return true;
+  },
+
+  async olvidarEvento(eventoId) {
+    eventos.delete(eventoId);
   },
 };

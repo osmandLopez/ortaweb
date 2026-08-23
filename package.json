@@ -17,6 +17,7 @@
     "db:probar": "tsx scripts/probar-base.ts",
     "correo:probar": "tsx scripts/probar-correo.ts",
     "admin": "tsx scripts/hacer-admin.ts",
+    "stripe:probar": "tsx scripts/probar-stripe.ts",
     "stripe:listen": "stripe listen --forward-to localhost:4321/api/webhooks/stripe"
   },
   "dependencies": {
