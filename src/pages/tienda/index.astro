@@ -1,6 +1,8 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Catalogo from '@/components/commerce/Catalogo.astro';
+import { Image } from 'astro:assets';
+import loteriaFondo from '@/assets/tptlbg.webp';
 import { db } from '@/lib/db';
 
 const q = Astro.url.searchParams.get('q') ?? undefined;
@@ -8,15 +10,50 @@ const orden = (Astro.url.searchParams.get('orden') ?? 'reciente') as 'reciente' 
 
 const productos = await db.listarProductos({ busqueda: q, orden });
 const categorias = await db.listarCategorias();
+
+/* Identidad visual compartida con la tarjeta del inicio: quien llega desde
+   «Todo para tu lotería» ve la misma textura de cartas en la cabecera, así que
+   el clic se siente como entrar a la categoría y no como caer en una búsqueda
+   cualquiera. Se normaliza a minúsculas porque `q` viene de la URL y la escribe
+   quien quiera. Las demás búsquedas dejan `fondo` en null y la cabecera se
+   queda exactamente como estaba: papel y texto oscuro. Cuando existan los
+   fondos de las otras dos categorías, esto crece a un objeto por búsqueda. */
+const fondo = q?.trim().toLowerCase() === 'loteria' ? loteriaFondo : null;
 ---
 
 <BaseLayout titulo={q ? `Resultados para “${q}”` : 'Tienda'} activo="/tienda">
-  <div class="border-b border-tinta-200 bg-papel-mostrador">
-    <div class="contenedor py-10">
-      <h1 class="rotulo rotulo-negro text-rotulo text-tinta-900">
+  <div
+    class:list={[
+      'relative overflow-hidden border-b',
+      fondo ? 'border-tinta-900' : 'border-tinta-200 bg-papel-mostrador',
+    ]}
+  >
+    {fondo && (
+      <Fragment>
+        {/* El origen mide 736 de ancho, así que se pide tal cual: pedir más solo
+            haría que Astro lo escalara hacia arriba y pesara de más sin ganar un
+            solo píxel de detalle. Sobre una banda ancha se ve algo suave, pero
+            es una textura de fondo bajo una capa oscura, no la foto de un
+            producto. */}
+        <Image
+          src={fondo}
+          alt=""
+          width={736}
+          loading="eager"
+          decoding="sync"
+          class="absolute inset-0 h-full w-full object-cover"
+        />
+        {/* Más opaca que en las tarjetas del inicio, y a propósito: aquí el texto
+            es grande, corre a lo ancho y cae sobre cartas de todos los colores.
+            Con el 25% de la tarjeta, el encabezado se perdía. */}
+        <span class="absolute inset-0 bg-tinta-900/60" aria-hidden="true"></span>
+      </Fragment>
+    )}
+    <div class="contenedor relative py-10">
+      <h1 class:list={['rotulo rotulo-negro text-rotulo', fondo ? 'text-white' : 'text-tinta-900']}>
         {q ? 'Resultados' : 'Todo el catálogo'}
       </h1>
-      <p class="mt-3 max-w-lg text-tinta-600">
+      <p class:list={['mt-3 max-w-lg', fondo ? 'text-white/85' : 'text-tinta-600']}>
         {q
           ? `Lo que encontramos para “${q}”.`
           : 'Novedades, temporada, papelería, hogar y regalo. Todo lo que hay hoy en el mostrador.'}

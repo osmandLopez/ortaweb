@@ -4,6 +4,7 @@ import ProductCard from '@/components/commerce/ProductCard.astro';
 import { Image } from 'astro:assets';
 import artesanales from '@/assets/ProductosArtesanales.webp';
 import loteria from '@/assets/tptl.webp';
+import loteriaFondo from '@/assets/tptlbg.webp';
 import { db } from '@/lib/db';
 
 const destacados = await db.listarProductos({ destacado: true, limite: 4 });
@@ -25,13 +26,24 @@ const degradados = {
 /* Las tres categorías principales del inicio. Viven dentro del hero y son el
    único bloque de categorías de la página: no se repiten más abajo.
    `nombre` es la versión corta para la franja de la tarjeta; `texto` es la
-   descripción que ya se usaba antes. */
+   descripción que ya se usaba antes.
+
+   `imagen` y `fondoImagen` son cosas distintas y conviene no confundirlas:
+   `imagen` es el rótulo recortado que va centrado y en `object-contain`, y
+   `fondoImagen` la textura que cubre la tarjeta entera por debajo, en
+   `object-cover`. Hoy solo lotería tiene fondo propio —de ahí el «bg» en
+   tptlbg.webp—; las otras dos se quedan con su degradado, que sigue siendo la
+   base de todas. El día que existan `gaiabg` y `temporadabg` basta con
+   importarlos arriba y ponerlos aquí: el marcado ya los pinta sin tocar nada
+   más. Estirar un rótulo con transparencia a `cover` no vale como sustituto:
+   se recorta por los lados y se deforma. */
 const vitrinas = [
   {
     nombre: 'Gaia Rapunzel',
     texto: 'Productos artesanales · cuidado capilar',
     href: '/tienda?q=gaia',
     imagen: artesanales,
+    fondoImagen: null,
     fondo: degradados.gaia,
   },
   {
@@ -39,6 +51,7 @@ const vitrinas = [
     texto: 'Juegos, cartas y accesorios',
     href: '/tienda?q=loteria',
     imagen: loteria,
+    fondoImagen: loteriaFondo,
     fondo: degradados.loteria,
   },
   {
@@ -46,6 +59,7 @@ const vitrinas = [
     texto: 'Novedades para cada celebración',
     href: '/temporada',
     imagen: null,
+    fondoImagen: null,
     fondo: degradados.temporada,
   },
 ];
@@ -53,6 +67,14 @@ const vitrinas = [
 /* El único ancho que se pide de cada rótulo. Compartirlo entre el mosaico del
    hero y las tarjetas hace que el navegador descargue un solo archivo. */
 const ANCHO_ROTULO = 760;
+
+/* Ancho del fondo de tarjeta. La tarjeta mide ~340px en escritorio y el ancho de
+   la pantalla en móvil, así que esto cubre las dos con margen para pantallas de
+   doble densidad. Es además todo lo que da el origen: tptlbg.webp mide 736 de
+   ancho, y pedir más solo pesaría más sin añadir un píxel de detalle.
+   Ojo: el adaptador redondea al alza dentro de `imagesConfig.sizes` de
+   astro.config.mjs, así que lo que acaba pidiéndose son 750. */
+const ANCHO_FONDO = 720;
 
 /* Enlace al mapa construido con la dirección real de la sucursal. No se inventa
    ningún dato: es la misma cadena que ya se muestra en pantalla. */
@@ -101,10 +123,23 @@ const mapaDe = (nombre: string, direccion: string) =>
             <a
               href={vitrinas[0].href}
               class:list={[
-                'group flex h-full flex-col overflow-hidden rounded-2xl shadow-lg transition duration-200 hover:-translate-y-1 hover:shadow-alzada',
+                'group relative flex h-full flex-col overflow-hidden rounded-2xl shadow-lg transition duration-200 hover:-translate-y-1 hover:shadow-alzada',
                 vitrinas[0].fondo,
               ]}
             >
+              {vitrinas[0].fondoImagen && (
+                <Fragment>
+                  <Image
+                    src={vitrinas[0].fondoImagen}
+                    alt=""
+                    width={ANCHO_FONDO}
+                    loading="eager"
+                    decoding="sync"
+                    class="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <span class="absolute inset-0 bg-black/25" aria-hidden="true"></span>
+                </Fragment>
+              )}
               <span class="relative flex aspect-[16/10] items-center justify-center overflow-hidden p-5 sm:aspect-[12/5]">
                 <Image
                   src={artesanales}
@@ -116,7 +151,7 @@ const mapaDe = (nombre: string, direccion: string) =>
                 />
                 <span class="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/15" aria-hidden="true"></span>
               </span>
-              <span class="border-t border-white/15 bg-black/30 px-4 py-2.5">
+              <span class="relative border-t border-white/15 bg-black/30 px-4 py-2.5">
                 <span class="block text-sm font-bold text-white">{vitrinas[0].nombre}</span>
                 <span class="mt-0.5 block text-xs text-white/75">{vitrinas[0].texto}</span>
                 <span class="etiqueta mt-2.5 inline-flex items-center gap-1.5 text-white">
@@ -134,10 +169,23 @@ const mapaDe = (nombre: string, direccion: string) =>
               <a
                 href={v.href}
                 class:list={[
-                  'group flex h-full flex-col overflow-hidden rounded-2xl shadow-lg transition duration-200 hover:-translate-y-1 hover:shadow-alzada',
+                  'group relative flex h-full flex-col overflow-hidden rounded-2xl shadow-lg transition duration-200 hover:-translate-y-1 hover:shadow-alzada',
                   v.fondo,
                 ]}
               >
+                {v.fondoImagen && (
+                  <Fragment>
+                    <Image
+                      src={v.fondoImagen}
+                      alt=""
+                      width={ANCHO_FONDO}
+                      loading="eager"
+                      decoding="sync"
+                      class="absolute inset-0 h-full w-full object-cover"
+                    />
+                    <span class="absolute inset-0 bg-black/25" aria-hidden="true"></span>
+                  </Fragment>
+                )}
                 <span class="relative flex aspect-[16/9] items-center justify-center overflow-hidden p-4 sm:aspect-auto sm:min-h-[7rem] sm:flex-1">
                   {v.imagen ? (
                     <Image
@@ -157,7 +205,7 @@ const mapaDe = (nombre: string, direccion: string) =>
                   )}
                   <span class="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/15" aria-hidden="true"></span>
                 </span>
-                <span class="border-t border-white/15 bg-black/30 px-4 py-2.5">
+                <span class="relative border-t border-white/15 bg-black/30 px-4 py-2.5">
                   <span class="block text-sm font-bold leading-snug text-white">{v.nombre}</span>
                   <span class="mt-0.5 block text-xs text-white/75">{v.texto}</span>
                   <span class="etiqueta mt-2.5 inline-flex items-center gap-1.5 text-white">
