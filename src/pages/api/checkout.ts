@@ -93,18 +93,27 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
       folio,
       usuarioId,
       origen: sitioUrl() || url.origin,
-      claveIdempotencia: await claveDelIntento(datos.email, usuarioId, items, datos.metodoEntrega, costoEnvio),
+      /* Una clave nueva por petición, no sacada del carrito.
+         Derivarla del contenido —mismo cliente, mismo carrito, misma entrega—
+         parecía proteger del doble clic, pero el cuerpo que acompaña a la clave
+         nunca es igual dos veces: el folio se sortea de nuevo y `expires_at` se
+         mueve con el reloj. Stripe entonces rechaza la repetición con «Keys for
+         idempotent requests can only be used with the same parameters», que aquí
+         se veía como "no pudimos abrir el pago". Le pasaba a cualquiera que
+         volviera de Stripe y pulsara Pagar por segunda vez. */
+      claveIdempotencia: crypto.randomUUID(),
     });
   } catch (e) {
     console.error(`[orta] No se pudo abrir la sesión de pago (${folio}):`, (e as Error).message);
     return json({ error: 'No pudimos abrir el pago ahora mismo. Inténtalo en un momento.' }, 502);
   }
 
-  /* La clave de idempotencia hace que un reenvío devuelva la sesión que Stripe
-     ya había creado, no una nueva. Si es eso lo que pasó, el pedido pendiente
-     también existe ya: se devuelve tal cual. Insertarlo otra vez chocaría contra
-     el índice único de stripe_session_id y el cliente vería un 500 por haber
-     hecho doble clic. */
+  /* El SDK reintenta solo los fallos de red (maxNetworkRetries), y al reintentar
+     reenvía la misma clave de idempotencia. Si la primera llamada sí llegó a
+     Stripe y lo que se perdió fue la respuesta, el reintento devuelve la sesión
+     que ya existía —y con ella, un pedido que ya guardamos—. Insertarlo otra vez
+     chocaría contra el índice único de stripe_session_id y el cliente vería un
+     500 por un problema de red que ya estaba resuelto. */
   const existente = await db.obtenerPedidoPorSesion(sesion.id);
   if (existente) {
     return json({ url: sesion.url, folio: existente.folio, total: existente.total });
@@ -135,35 +144,3 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
 
   return json({ url: sesion.url, folio, total });
 };
-
-/**
- * Clave de idempotencia del intento de compra.
- *
- * Sale del contenido: mismo cliente, mismo carrito, misma entrega y mismo
- * importe dan la misma clave, así que un doble clic o un reintento de la red
- * recuperan la sesión que Stripe ya abrió en vez de crear una segunda.
- *
- * Lleva dentro un tramo de 15 minutos a propósito. Sin él, la clave viviría las
- * 24 horas que Stripe las guarda y quien volviera al día siguiente con el mismo
- * carrito recibiría su sesión vieja, ya caducada, en vez de una nueva. Con él,
- * la coincidencia solo dura lo que dura un intento de pago de verdad.
- */
-async function claveDelIntento(
-  email: string,
-  usuarioId: string | null,
-  items: ItemCarrito[],
-  metodoEntrega: string,
-  costoEnvio: number,
-): Promise<string> {
-  const huella = [
-    usuarioId ?? email.toLowerCase(),
-    metodoEntrega,
-    costoEnvio,
-    ...items.map((i) => `${i.productoId}:${i.cantidad}:${i.precio}`).sort(),
-    Math.floor(Date.now() / (15 * 60 * 1000)),
-  ].join('|');
-
-  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(huella));
-  const hex = [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
-  return `checkout_${hex.slice(0, 40)}`;
-}

@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/preact';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { carrito, subtotal } from '@/stores/cart';
 import { precio } from '@/lib/money';
 import { correoValido } from '@/lib/auth-cliente';
@@ -32,6 +32,21 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
   const opcion = opciones.find((o) => o.id === opcionId) ?? null;
   const costoEnvio = metodo === 'envio' ? opcion?.costo ?? 0 : 0;
   const total = mercancia + costoEnvio;
+
+  /* Volver con el botón "atrás" desde Stripe no siempre recarga la página: el
+     navegador suele tenerla guardada entera —el bfcache— con el estado de
+     JavaScript incluido. Cuando la restaura así, `enviando` sigue valiendo true
+     (lo dejamos puesto a propósito al salir hacia Stripe) y el botón se queda
+     apagado en "Abriendo pago seguro…"; ni cambiando la entrega se despierta,
+     porque el submit sale por el cerrojo del doble clic. Al restaurarla lo
+     soltamos: de ese intento no salió ningún cobro y se puede volver a empezar. */
+  useEffect(() => {
+    const alRestaurar = (e: PageTransitionEvent) => {
+      if (e.persisted) setEnviando(false);
+    };
+    window.addEventListener('pageshow', alRestaurar);
+    return () => window.removeEventListener('pageshow', alRestaurar);
+  }, []);
 
   const cotizar = async () => {
     setError('');
@@ -151,7 +166,7 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
               <label key={valor}
                 class={`cursor-pointer rounded-md border p-4 transition ${metodo === valor ? 'border-cielo-500 bg-cielo-50' : 'border-tinta-200 hover:border-tinta-400'}`}>
                 <input type="radio" name="metodo" class="sr-only" checked={metodo === valor}
-                  onChange={() => setMetodo(valor)} />
+                  onChange={() => { setError(''); setMetodo(valor); }} />
                 <span class="block text-sm font-bold text-tinta-900">{titulo}</span>
                 <span class="block text-xs text-tinta-500">{ayuda}</span>
               </label>
@@ -177,7 +192,7 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
                       <label class={`flex cursor-pointer items-center justify-between gap-3 rounded-md border p-3.5 transition ${opcionId === o.id ? 'border-cielo-500 bg-cielo-50' : 'border-tinta-200 hover:border-tinta-400'}`}>
                         <span>
                           <input type="radio" name="opcionEnvio" class="sr-only" checked={opcionId === o.id}
-                            onChange={() => setOpcionId(o.id)} />
+                            onChange={() => { setError(''); setOpcionId(o.id); }} />
                           <span class="block text-sm font-bold text-tinta-900">{o.nombre}</span>
                           <span class="block text-xs text-tinta-500">
                             {o.descripcion} · {o.diasHabiles[0]}–{o.diasHabiles[1]} días hábiles
@@ -198,7 +213,7 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
                 <li key={s.id}>
                   <label class={`block cursor-pointer rounded-md border p-3.5 transition ${sucursalId === s.id ? 'border-cielo-500 bg-cielo-50' : 'border-tinta-200 hover:border-tinta-400'}`}>
                     <input type="radio" name="sucursal" class="sr-only" checked={sucursalId === s.id}
-                      onChange={() => setSucursalId(s.id)} />
+                      onChange={() => { setError(''); setSucursalId(s.id); }} />
                     <span class="block text-sm font-bold text-tinta-900">{s.nombre}</span>
                     <span class="block text-xs text-tinta-500">{s.direccion}</span>
                     <span class="mt-1 block font-nota text-[11px] text-tinta-500">{s.horario}</span>
