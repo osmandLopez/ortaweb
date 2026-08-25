@@ -92,57 +92,66 @@ const mapaDe = (nombre: string, direccion: string) =>
       lo dice en texto y el rótulo se queda como h2 de su franja. */}
   <h1 class="sr-only">Orta Novedades: novedades, artículos de temporada y regalos</h1>
 
-  <!-- NIVEL 1 · Temporada. El rótulo a la izquierda y la rebaja mayor a la
-       derecha, que es lo que trae a la gente. -->
-  <section class="bg-oro-500">
-    <div class="contenedor grid items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:py-14">
-      <h2>
-        <Image
-          src={rotuloTemporada}
-          alt="Artículos de temporada"
-          width={760}
-          height={423}
-          loading="eager"
-          decoding="sync"
-          class="w-full max-w-xl drop-shadow-sm"
-        />
-      </h2>
+  <!-- NIVELES 1-2 · El mosaico de entrada.
+       Los tres bloques son tarjetas del mismo juego: mismo radio, misma sombra,
+       mismo hueco entre ellas y el mismo contenedor, así que comparten los
+       bordes izquierdo y derecho y ninguna toca el filo de la pantalla. La de
+       temporada no es un enlace entero como las otras dos —lleva texto largo y
+       su propio botón—, pero se dibuja igual para que se lean como un juego. -->
+  <section class="border-b border-tinta-200 bg-papel-mostrador py-6 sm:py-8">
+    <!-- Temporada: el rótulo a la izquierda y la rebaja mayor a la derecha, que
+         es lo que trae a la gente. El padding va aquí dentro y no en el
+         contenedor, porque ahora el color acaba en el borde redondeado. -->
+    <div class="contenedor">
+      <div class="overflow-hidden rounded-2xl bg-oro-500 shadow-lg">
+        <div class="grid items-center gap-8 px-6 py-10 sm:px-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:py-12">
+          <h2>
+            <Image
+              src={rotuloTemporada}
+              alt="Artículos de temporada"
+              width={760}
+              height={423}
+              loading="eager"
+              decoding="sync"
+              class="w-full max-w-xl drop-shadow-sm"
+            />
+          </h2>
 
-      <div>
-        {/* Sin rebajas no se enseña un −0%: se cae al texto y al botón, que
-            siguen teniendo sentido por sí solos. */}
-        {mayorRebaja > 0 && (
-          <Fragment>
-            <p class="etiqueta inline-block rounded-full bg-oro-900/15 px-3 py-1 text-oro-900">
-              Hasta
+          <div>
+            {/* Sin rebajas no se enseña un −0%: se cae al texto y al botón, que
+                siguen teniendo sentido por sí solos. */}
+            {mayorRebaja > 0 && (
+              <Fragment>
+                <p class="etiqueta inline-block rounded-full bg-oro-900/15 px-3 py-1 text-oro-900">
+                  Hasta
+                </p>
+                <p class="rotulo rotulo-negro mt-2 text-rotulo-xl leading-none text-tinta-900">
+                  −{mayorRebaja}%
+                </p>
+              </Fragment>
+            )}
+
+            <p class="mt-5 max-w-md text-lg leading-relaxed text-tinta-800">
+              Navidad, regreso a clases y todo lo que se mueve con el calendario.
+              Cuando se acaba la existencia, se acaba el precio.
             </p>
-            <p class="rotulo rotulo-negro mt-2 text-rotulo-xl leading-none text-tinta-900">
-              −{mayorRebaja}%
-            </p>
-          </Fragment>
-        )}
 
-        <p class="mt-5 max-w-md text-lg leading-relaxed text-tinta-800">
-          Navidad, regreso a clases y todo lo que se mueve con el calendario.
-          Cuando se acaba la existencia, se acaba el precio.
-        </p>
-
-        <a href="/temporada" class="btn-tinta mt-7">
-          Ver productos
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </a>
+            <a href="/temporada" class="btn-tinta mt-7">
+              Ver productos
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
-  </section>
 
-  <!-- NIVEL 2 · Las categorías con tarjeta. Enlaces reales, no decoración: cada
-       tarjeta es un <a> completo, así que funciona con teclado y el foco visible
-       del sistema la marca sin JavaScript de por medio. En <640px se apilan para
-       que el área táctil no quede diminuta. -->
-  <section class="border-b border-tinta-200 bg-papel-mostrador py-8 sm:py-10">
-    <nav class="contenedor" aria-label="Categorías principales">
+    <!-- Las categorías con tarjeta. Enlaces reales, no decoración: cada tarjeta
+         es un <a> completo, así que funciona con teclado y el foco visible del
+         sistema la marca sin JavaScript de por medio. En <640px se apilan para
+         que el área táctil no quede diminuta. -->
+    <nav class="contenedor mt-4 sm:mt-5" aria-label="Categorías principales">
       <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
         {vitrinas.map((v) => (
           <li>
