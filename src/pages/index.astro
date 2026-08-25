@@ -2,50 +2,52 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import ProductCard from '@/components/commerce/ProductCard.astro';
 import { Image } from 'astro:assets';
-import artesanales from '@/assets/ProductosArtesanales.webp';
-import loteria from '@/assets/tptl.webp';
-import loteriaFondo from '@/assets/tptlbg.webp';
+import gaia from '@/assets/gaia-rapunzel.webp';
+import loteria from '@/assets/todo-para-tu-loteria.webp';
+import loteriaFondo from '@/assets/todo-para-tu-loteria-fondo.webp';
+import rotuloTemporada from '@/assets/articulos-temporada.webp';
 import { db } from '@/lib/db';
+import { descuento } from '@/lib/money';
 
 const destacados = await db.listarProductos({ destacado: true, limite: 4 });
-const temporada = await db.listarProductos({ temporada: true, limite: 4 });
 const sucursales = await db.listarSucursales();
 
-/* El arte de cada vitrina es un rótulo con fondo transparente, no una
-   fotografía: por eso va en `object-contain` sobre su degradado.
-   Temporada todavía no tiene arte propio; lleva degradado y adorno.
+/* Se piden todos los de temporada, no cuatro: el banderón de arriba anuncia la
+   rebaja mayor, y calculada sobre una lista recortada anunciaría la mayor de
+   esas cuatro, que no tiene por qué ser la mayor de verdad. La rejilla dorada de
+   más abajo sigue enseñando cuatro, cortados aquí y no en la consulta. */
+const temporadaTodos = await db.listarProductos({ temporada: true });
+const temporada = temporadaTodos.slice(0, 4);
+const mayorRebaja = temporadaTodos.reduce(
+  (max, p) => Math.max(max, descuento(p.precio, p.precioAnterior) ?? 0),
+  0,
+);
 
-   Los degradados se nombran aparte porque se usan dos veces: en el mosaico del
-   hero y en las tarjetas de categoría. */
+/* El arte de cada vitrina es un rótulo con fondo transparente, no una
+   fotografía: por eso va en `object-contain` sobre el fondo de la tarjeta.
+
+   Los degradados se nombran aparte porque son la base: lo que se ve cuando la
+   categoría no tiene fondo propio, y lo que asoma en los bordes cuando sí. */
 const degradados = {
   gaia: 'bg-gradient-to-br from-[#2A0A3D] via-[#5B1E86] to-[#9B45D8]',
   loteria: 'bg-gradient-to-br from-[#05283A] via-[#0C7EA6] to-[#3FD2E8]',
-  temporada: 'bg-gradient-to-br from-[#7C2D12] via-[#EA580C] to-[#38BDF8]',
 };
 
-/* Las tres categorías principales del inicio. Viven dentro del hero y son el
-   único bloque de categorías de la página: no se repiten más abajo.
-   `nombre` es la versión corta para la franja de la tarjeta; `texto` es la
-   descripción que ya se usaba antes.
+/* Las categorías que llevan tarjeta en el inicio.
+
+   Temporada no está aquí a propósito: ya tiene el banderón dorado de arriba, y
+   darle además tarjeta ponía la misma categoría dos veces en la misma pantalla.
+   Quien la busque entra por «Ver productos» del banderón.
 
    `imagen` y `fondoImagen` son cosas distintas y conviene no confundirlas:
    `imagen` es el rótulo recortado que va centrado y en `object-contain`, y
    `fondoImagen` la textura que cubre la tarjeta entera por debajo, en
-   `object-cover`. Hoy solo lotería tiene fondo propio —de ahí el «bg» en
-   tptlbg.webp—; las otras dos se quedan con su degradado, que sigue siendo la
-   base de todas. El día que existan `gaiabg` y `temporadabg` basta con
-   importarlos arriba y ponerlos aquí: el marcado ya los pinta sin tocar nada
-   más. Estirar un rótulo con transparencia a `cover` no vale como sustituto:
-   se recorta por los lados y se deforma. */
+   `object-cover`. Hoy solo lotería tiene fondo propio; Gaia se queda con su
+   degradado hasta que exista el archivo, y en cuanto exista basta con
+   importarlo arriba y ponerlo aquí, que el marcado ya lo pinta. Estirar un
+   rótulo con transparencia a `cover` no vale como sustituto: se recorta por los
+   lados y se deforma. */
 const vitrinas = [
-  {
-    nombre: 'Gaia Rapunzel',
-    texto: 'Productos artesanales · cuidado capilar',
-    href: '/tienda?q=gaia',
-    imagen: artesanales,
-    fondoImagen: null,
-    fondo: degradados.gaia,
-  },
   {
     nombre: 'Todo para tu lotería',
     texto: 'Juegos, cartas y accesorios',
@@ -55,25 +57,26 @@ const vitrinas = [
     fondo: degradados.loteria,
   },
   {
-    nombre: 'Artículos de temporada',
-    texto: 'Novedades para cada celebración',
-    href: '/temporada',
-    imagen: null,
+    nombre: 'Gaia Rapunzel',
+    texto: 'Productos artesanales · cuidado capilar',
+    href: '/tienda?q=gaia',
+    imagen: gaia,
     fondoImagen: null,
-    fondo: degradados.temporada,
+    fondo: degradados.gaia,
   },
 ];
 
-/* El único ancho que se pide de cada rótulo. Compartirlo entre el mosaico del
-   hero y las tarjetas hace que el navegador descargue un solo archivo. */
+/* El único ancho que se pide de cada rótulo. Compartirlo entre las tarjetas hace
+   que el navegador descargue un solo archivo. */
 const ANCHO_ROTULO = 760;
 
-/* Ancho del fondo de tarjeta. La tarjeta mide ~340px en escritorio y el ancho de
-   la pantalla en móvil, así que esto cubre las dos con margen para pantallas de
-   doble densidad. Es además todo lo que da el origen: tptlbg.webp mide 736 de
-   ancho, y pedir más solo pesaría más sin añadir un píxel de detalle.
-   Ojo: el adaptador redondea al alza dentro de `imagesConfig.sizes` de
-   astro.config.mjs, así que lo que acaba pidiéndose son 750. */
+/* Ancho del fondo de tarjeta. Con dos tarjetas a lo ancho del contenedor cada
+   una ronda los 590px en escritorio, así que en pantallas de doble densidad
+   pediríamos más de mil. No los hay: todo-para-tu-loteria-fondo.webp mide 736 de
+   ancho y ese es el techo. Se pide lo máximo aprovechable y se acepta que en
+   retina no sea perfecto; es una textura de fondo bajo una capa oscura, no la
+   foto de un producto. El adaptador redondea al alza dentro de
+   `imagesConfig.sizes` de astro.config.mjs, así que acaban pidiéndose 750. */
 const ANCHO_FONDO = 720;
 
 /* Enlace al mapa construido con la dirección real de la sucursal. No se inventa
@@ -83,78 +86,109 @@ const mapaDe = (nombre: string, direccion: string) =>
 ---
 
 <BaseLayout titulo="Novedades, temporada y regalos" activo="/">
-  <!-- NIVELES 1-3 · HERO: mensaje y CTA a la izquierda, las tres categorías
-       principales a la derecha. Son enlaces reales y son el único bloque de
-       categorías de la página: no se repiten más abajo. -->
-  <section class="border-b border-tinta-200 bg-papel-mostrador">
-    <div class="contenedor grid items-center gap-10 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:py-14">
+  {/* El h1 va oculto a la vista y no por descuido: lo más grande de la pantalla
+      es el rótulo de temporada, y tomarlo como encabezado de la página diría que
+      el inicio trata de temporada. La portada es la tienda entera, así que el h1
+      lo dice en texto y el rótulo se queda como h2 de su franja. */}
+  <h1 class="sr-only">Orta Novedades: novedades, artículos de temporada y regalos</h1>
+
+  <!-- NIVEL 1 · Temporada. El rótulo a la izquierda y la rebaja mayor a la
+       derecha, que es lo que trae a la gente. -->
+  <section class="bg-oro-500">
+    <div class="contenedor grid items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:py-14">
+      <h2>
+        <Image
+          src={rotuloTemporada}
+          alt="Artículos de temporada"
+          width={760}
+          height={423}
+          loading="eager"
+          decoding="sync"
+          class="w-full max-w-xl drop-shadow-sm"
+        />
+      </h2>
+
       <div>
-        <p class="etiqueta inline-flex items-center gap-2.5 text-tinta-500">
-          <span class="h-1.5 w-1.5 rounded-full bg-cielo-500" aria-hidden="true"></span>
-          Mostrador abierto · {sucursales.length} sucursales
+        {/* Sin rebajas no se enseña un −0%: se cae al texto y al botón, que
+            siguen teniendo sentido por sí solos. */}
+        {mayorRebaja > 0 && (
+          <Fragment>
+            <p class="etiqueta inline-block rounded-full bg-oro-900/15 px-3 py-1 text-oro-900">
+              Hasta
+            </p>
+            <p class="rotulo rotulo-negro mt-2 text-rotulo-xl leading-none text-tinta-900">
+              −{mayorRebaja}%
+            </p>
+          </Fragment>
+        )}
+
+        <p class="mt-5 max-w-md text-lg leading-relaxed text-tinta-800">
+          Navidad, regreso a clases y todo lo que se mueve con el calendario.
+          Cuando se acaba la existencia, se acaba el precio.
         </p>
 
-        <!-- El interlineado va pegado a cada tamaño (text-4xl/tight): si se pone
-             suelto con `leading-tight`, la variante lg:text-6xl vive dentro de un
-             media query posterior y vuelve a imponer su propio line-height. -->
-        <h1 class="rotulo rotulo-negro mt-5 text-4xl/tight text-tinta-900 md:text-5xl/tight lg:text-6xl/tight">
-          Llévatelo hoy<br />
-          o te lo <span class="text-cielo-500">enviamos</span><br />
-          a casa
-        </h1>
-
-        <p class="mt-5 max-w-md text-lg leading-relaxed text-tinta-600">
-          Compra en línea y recoge en sucursal el mismo día.
-        </p>
-
-        <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <a href="/tienda" class="btn-primario">Ver el catálogo</a>
-          <a href="/temporada" class="btn-linea">Ventas de temporada</a>
-        </div>
+        <a href="/temporada" class="btn-tinta mt-7">
+          Ver productos
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
       </div>
+    </div>
+  </section>
 
-      <!-- Las tres categorías principales: enlaces reales, no decoración.
-           Cada tarjeta es un <a> completo, así que funciona con teclado y el
-           foco visible del sistema la marca sin JavaScript de por medio.
-           En <640px se apilan para que el área táctil no quede diminuta. -->
-      <nav aria-label="Categorías principales">
-        <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-          <li class="sm:col-span-2">
+  <!-- NIVEL 2 · Las categorías con tarjeta. Enlaces reales, no decoración: cada
+       tarjeta es un <a> completo, así que funciona con teclado y el foco visible
+       del sistema la marca sin JavaScript de por medio. En <640px se apilan para
+       que el área táctil no quede diminuta. -->
+  <section class="border-b border-tinta-200 bg-papel-mostrador py-8 sm:py-10">
+    <nav class="contenedor" aria-label="Categorías principales">
+      <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+        {vitrinas.map((v) => (
+          <li>
             <a
-              href={vitrinas[0].href}
+              href={v.href}
               class:list={[
                 'group relative flex h-full flex-col overflow-hidden rounded-2xl shadow-lg transition duration-200 hover:-translate-y-1 hover:shadow-alzada',
-                vitrinas[0].fondo,
+                v.fondo,
               ]}
             >
-              {vitrinas[0].fondoImagen && (
-                <Fragment>
-                  <Image
-                    src={vitrinas[0].fondoImagen}
-                    alt=""
-                    width={ANCHO_FONDO}
-                    loading="eager"
-                    decoding="sync"
-                    class="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <span class="absolute inset-0 bg-black/25" aria-hidden="true"></span>
-                </Fragment>
-              )}
-              <span class="relative flex aspect-[16/10] items-center justify-center overflow-hidden p-5 sm:aspect-[12/5]">
+              {v.fondoImagen && (
                 <Image
-                  src={artesanales}
+                  src={v.fondoImagen}
+                  alt=""
+                  width={ANCHO_FONDO}
+                  loading="eager"
+                  decoding="sync"
+                  class="absolute inset-0 h-full w-full object-cover"
+                />
+              )}
+
+              {/* Una sola capa en degradado en vez de un velo parejo: arriba deja
+                  ver la textura casi limpia, y abajo se cierra lo suficiente para
+                  que el nombre y el botón se lean sin ponerle una franja negra
+                  encima. Va siempre, también sobre los degradados, porque el
+                  texto blanco también los necesita en la parte clara. */}
+              <span
+                class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/10 transition-opacity duration-200 group-hover:opacity-90"
+                aria-hidden="true"
+              ></span>
+
+              <span class="relative flex aspect-[16/9] items-center justify-center overflow-hidden p-5 sm:aspect-[2/1]">
+                <Image
+                  src={v.imagen}
                   alt=""
                   width={ANCHO_ROTULO}
                   loading="eager"
                   decoding="sync"
                   class="max-h-full w-auto object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105"
                 />
-                <span class="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/15" aria-hidden="true"></span>
               </span>
-              <span class="relative border-t border-white/15 bg-black/30 px-4 py-2.5">
-                <span class="block text-sm font-bold text-white">{vitrinas[0].nombre}</span>
-                <span class="mt-0.5 block text-xs text-white/75">{vitrinas[0].texto}</span>
-                <span class="etiqueta mt-2.5 inline-flex items-center gap-1.5 text-white">
+
+              <span class="relative px-5 pb-5">
+                <span class="block text-lg font-bold leading-snug text-white">{v.nombre}</span>
+                <span class="mt-1 block text-sm text-white/80">{v.texto}</span>
+                <span class="etiqueta mt-4 inline-flex items-center gap-2 rounded-full border border-white/45 px-4 py-2 text-white transition duration-200 group-hover:border-white group-hover:bg-white/15">
                   Ver categoría
                   <svg width="13" height="13" viewBox="0 0 14 14" fill="none" class="transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true">
                     <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
@@ -163,65 +197,11 @@ const mapaDe = (nombre: string, direccion: string) =>
               </span>
             </a>
           </li>
-
-          {vitrinas.slice(1).map((v) => (
-            <li>
-              <a
-                href={v.href}
-                class:list={[
-                  'group relative flex h-full flex-col overflow-hidden rounded-2xl shadow-lg transition duration-200 hover:-translate-y-1 hover:shadow-alzada',
-                  v.fondo,
-                ]}
-              >
-                {v.fondoImagen && (
-                  <Fragment>
-                    <Image
-                      src={v.fondoImagen}
-                      alt=""
-                      width={ANCHO_FONDO}
-                      loading="eager"
-                      decoding="sync"
-                      class="absolute inset-0 h-full w-full object-cover"
-                    />
-                    <span class="absolute inset-0 bg-black/25" aria-hidden="true"></span>
-                  </Fragment>
-                )}
-                <span class="relative flex aspect-[16/9] items-center justify-center overflow-hidden p-4 sm:aspect-auto sm:min-h-[7rem] sm:flex-1">
-                  {v.imagen ? (
-                    <Image
-                      src={v.imagen}
-                      alt=""
-                      width={ANCHO_ROTULO}
-                      loading="eager"
-                      decoding="sync"
-                      class="max-h-full w-auto object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <span class="flex items-center gap-2 text-4xl transition-transform duration-300 group-hover:scale-105" aria-hidden="true">
-                      <span class="-rotate-12">🍁</span>
-                      <span class="translate-y-2 text-5xl">❄️</span>
-                      <span class="rotate-12">🎃</span>
-                    </span>
-                  )}
-                  <span class="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/15" aria-hidden="true"></span>
-                </span>
-                <span class="relative border-t border-white/15 bg-black/30 px-4 py-2.5">
-                  <span class="block text-sm font-bold leading-snug text-white">{v.nombre}</span>
-                  <span class="mt-0.5 block text-xs text-white/75">{v.texto}</span>
-                  <span class="etiqueta mt-2.5 inline-flex items-center gap-1.5 text-white">
-                    Ver categoría
-                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" class="transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true">
-                      <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                  </span>
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    </div>
+        ))}
+      </ul>
+    </nav>
   </section>
+
 
   <!-- NIVEL 4 · Beneficios: franja de confianza entre las categorías y el catálogo -->
   <section class="border-b border-tinta-200 bg-white">
@@ -281,7 +261,10 @@ const mapaDe = (nombre: string, direccion: string) =>
     </div>
   </section>
 
-  <!-- Temporada: la única franja dorada del sitio -->
+  <!-- NIVEL 6 · Temporada, los productos. La segunda franja dorada de la página:
+       la de arriba anuncia la rebaja y manda a /temporada, esta enseña cuatro
+       artículos concretos con su precio. Comparten color a propósito, para que
+       se lean como la misma sección de la tienda. -->
   <section class="bg-oro-500">
     <div class="contenedor py-14">
       <div class="flex flex-wrap items-end justify-between gap-4">
