@@ -13,7 +13,6 @@ const vacio = {
   nombre: '', slug: '', descripcion: '', sku: '',
   precio: '', precioAnterior: '', stock: '0', categoriaId: '',
   temporada: false, destacado: false, activo: true,
-  imagenes: '',
 };
 
 const aSlug = (s: string) =>
@@ -21,6 +20,51 @@ const aSlug = (s: string) =>
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 const aCentavos = (pesos: string) => Math.round(Number(pesos || 0) * 100);
+
+/*
+ * Lado máximo de la foto que se sube, en píxeles.
+ *
+ * Las fotos de celular vienen de 4000 px y 5 MB. Subirlas tal cual llena el
+ * almacén y, peor, deja al cliente cargando megas para ver una tarjeta de 400
+ * px. Se reducen aquí, en el navegador, antes de que salgan: así la subida
+ * también es más rápida con datos móviles.
+ */
+const LADO_MAXIMO = 1600;
+
+async function reducir(archivo: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(archivo);
+    const escala = Math.min(1, LADO_MAXIMO / Math.max(bitmap.width, bitmap.height));
+
+    // Ya es chica y ligera: se sube tal cual y se conserva su formato original.
+    if (escala === 1 && archivo.size <= 1_000_000) {
+      bitmap.close();
+      return archivo;
+    }
+
+    const lienzo = document.createElement('canvas');
+    lienzo.width = Math.round(bitmap.width * escala);
+    lienzo.height = Math.round(bitmap.height * escala);
+
+    const ctx = lienzo.getContext('2d');
+    if (!ctx) {
+      bitmap.close();
+      return archivo;
+    }
+
+    ctx.drawImage(bitmap, 0, 0, lienzo.width, lienzo.height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((res) => lienzo.toBlob(res, 'image/jpeg', 0.82));
+    if (!blob) return archivo;
+
+    return new File([blob], `${archivo.name.replace(/\.[^.]+$/, '')}.jpg`, { type: 'image/jpeg' });
+  } catch {
+    /* Formatos que el navegador no sabe decodificar (HEIC de iPhone en
+       escritorio, sobre todo). Se manda el original y que el servidor decida. */
+    return archivo;
+  }
+}
 
 export default function ProductForm({ categorias, producto }: Props) {
   const [f, setF] = useState(
@@ -32,10 +76,12 @@ export default function ProductForm({ categorias, producto }: Props) {
           stock: String(producto.stock), categoriaId: producto.categoriaId,
           temporada: producto.temporada,
           destacado: producto.destacado, activo: producto.activo,
-          imagenes: producto.imagenes.join('\n'),
         }
       : vacio,
   );
+  const [imagenes, setImagenes] = useState<string[]>(producto?.imagenes ?? []);
+  const [subiendo, setSubiendo] = useState(0);
+  const [errorFoto, setErrorFoto] = useState('');
   const [estado, setEstado] = useState<Estado>({ tipo: 'inactivo' });
   const [errores, setErrores] = useState<Record<string, string>>({});
 
@@ -49,6 +95,44 @@ export default function ProductForm({ categorias, producto }: Props) {
       ...(k === 'nombre' && !producto ? { slug: aSlug(String(valor)) } : {}),
     }));
   };
+
+  const elegirFotos = async (ev: Event) => {
+    const input = ev.target as HTMLInputElement;
+    const elegidas = [...(input.files ?? [])];
+    input.value = ''; // permite volver a elegir la misma foto tras un error
+    if (elegidas.length === 0) return;
+
+    setErrorFoto('');
+    setSubiendo(elegidas.length);
+
+    for (const original of elegidas) {
+      if (/heic|heif/i.test(original.type) || /\.hei[cf]$/i.test(original.name)) {
+        setErrorFoto(`«${original.name}» es una foto de iPhone (HEIC). Guárdala como JPG y vuelve a intentarlo.`);
+        setSubiendo((n) => n - 1);
+        continue;
+      }
+
+      const cuerpo = new FormData();
+      cuerpo.append('archivo', await reducir(original));
+
+      const res = await fetch('/api/admin/imagenes', { method: 'POST', body: cuerpo }).catch(() => null);
+
+      if (!res?.ok) {
+        const { error } = (await res?.json().catch(() => null)) ?? {};
+        setErrorFoto(error ?? 'No se pudo subir la foto. Revisa tu conexión.');
+      } else {
+        const { url } = await res.json();
+        setImagenes((prev) => [...prev, url]);
+      }
+
+      setSubiendo((n) => n - 1);
+    }
+  };
+
+  const quitarFoto = (i: number) => setImagenes((prev) => prev.filter((_, j) => j !== i));
+
+  const hacerPortada = (i: number) =>
+    setImagenes((prev) => [prev[i], ...prev.filter((_, j) => j !== i)]);
 
   const validar = () => {
     const e: Record<string, string> = {};
@@ -79,7 +163,7 @@ export default function ProductForm({ categorias, producto }: Props) {
       precioAnterior: f.precioAnterior ? aCentavos(f.precioAnterior) : null,
       stock: Number(f.stock),
       categoriaId: f.categoriaId,
-      imagenes: f.imagenes.split('\n').map((s) => s.trim()).filter(Boolean),
+      imagenes,
       temporada: f.temporada,
       destacado: f.destacado,
       activo: f.activo,
@@ -98,7 +182,10 @@ export default function ProductForm({ categorias, producto }: Props) {
     }
 
     setEstado({ tipo: 'ok', mensaje: producto ? 'Producto actualizado.' : `${cuerpo.nombre} ya está en el catálogo.` });
-    if (!producto) setF(vacio);
+    if (!producto) {
+      setF(vacio);
+      setImagenes([]);
+    }
   };
 
   const raices = categorias.filter((c) => !c.padreId);
@@ -139,13 +226,75 @@ export default function ProductForm({ categorias, producto }: Props) {
               <textarea id="descripcion" rows={3} class="campo resize-y" value={f.descripcion} onInput={set('descripcion')}
                 placeholder="Materiales, medidas y cuidados. Lo que preguntarían en el mostrador." />
             </div>
+          </div>
+        </fieldset>
 
-            <div class="sm:col-span-2">
-              <label class="campo-etiqueta" for="imagenes">Imágenes · una URL por línea</label>
-              <textarea id="imagenes" rows={3} class="campo resize-y font-nota text-xs" value={f.imagenes} onInput={set('imagenes')}
-                placeholder="/img/vajilla-1.jpg" />
-              <p class="mt-1.5 text-xs text-tinta-500">La primera es la que se ve en el catálogo.</p>
-            </div>
+        {/* Fotos. Se suben en cuanto se eligen, no al guardar: así se ve de
+            inmediato si una salió mal y se puede cambiar sin perder el resto
+            del formulario. */}
+        <fieldset class="nota-seccion">
+          <legend class="etiqueta text-tinta-400">Fotos</legend>
+
+          <div class="mt-4">
+            <label
+              class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-tinta-300 px-4 py-8 text-center transition hover:border-cielo-500 hover:bg-cielo-50"
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round" class="text-tinta-400" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span class="text-sm font-bold text-tinta-900">Agregar fotos</span>
+              <span class="text-xs text-tinta-500">
+                JPG, PNG o WebP. Puedes elegir varias a la vez.
+              </span>
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple
+                class="sr-only" onChange={elegirFotos} />
+            </label>
+
+            {subiendo > 0 && (
+              <p role="status" class="mt-3 text-sm text-tinta-600">
+                Subiendo {subiendo} {subiendo === 1 ? 'foto' : 'fotos'}…
+              </p>
+            )}
+            {errorFoto && (
+              <p role="alert" class="mt-3 rounded-md bg-red-50 px-3 py-2.5 text-sm text-red-700">{errorFoto}</p>
+            )}
+
+            {imagenes.length > 0 && (
+              <>
+                <ul class="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {imagenes.map((url, i) => (
+                    <li key={url} class="group relative overflow-hidden rounded-md border border-tinta-200 bg-white">
+                      <img src={url} alt="" class="aspect-square w-full object-cover" loading="lazy" />
+
+                      {i === 0 && (
+                        <span class="absolute left-1.5 top-1.5 rounded bg-tinta-900 px-1.5 py-0.5 font-nota text-[9px] uppercase tracking-wider text-white">
+                          Portada
+                        </span>
+                      )}
+
+                      <div class="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-white/95 p-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+                        {i > 0 ? (
+                          <button type="button" onClick={() => hacerPortada(i)}
+                            class="rounded px-1.5 py-1 text-[10px] font-bold text-cielo-600 hover:bg-cielo-50">
+                            Portada
+                          </button>
+                        ) : <span />}
+                        <button type="button" onClick={() => quitarFoto(i)}
+                          class="rounded px-1.5 py-1 text-[10px] font-bold text-red-600 hover:bg-red-50">
+                          Quitar
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <p class="mt-2 text-xs text-tinta-500">
+                  La marcada como portada es la que se ve en el catálogo.
+                </p>
+              </>
+            )}
           </div>
         </fieldset>
 
@@ -209,7 +358,7 @@ export default function ProductForm({ categorias, producto }: Props) {
         </fieldset>
 
         <div class="sticky top-40 space-y-3">
-          <button type="submit" class="btn-primario w-full" disabled={estado.tipo === 'guardando'}>
+          <button type="submit" class="btn-primario w-full" disabled={estado.tipo === 'guardando' || subiendo > 0}>
             {estado.tipo === 'guardando' ? 'Guardando…' : producto ? 'Guardar cambios' : 'Publicar producto'}
           </button>
           <a href="/admin/productos" class="btn-linea w-full">Cancelar</a>

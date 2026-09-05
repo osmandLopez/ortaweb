@@ -31,6 +31,7 @@
     "@nanostores/persistent": "^0.10.2",
     "@nanostores/preact": "^0.5.2",
     "@stripe/stripe-js": "^5.5.0",
+    "@vercel/blob": "^2.8.0",
     "astro": "^5.2.5",
     "better-auth": "^1.6.26",
     "drizzle-orm": "^0.45.2",
