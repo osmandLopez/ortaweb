@@ -3,6 +3,7 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import Catalogo from '@/components/commerce/Catalogo.astro';
 import { Image } from 'astro:assets';
 import loteriaFondo from '@/assets/todo-para-tu-loteria-fondo.webp';
+import gaiaFondo from '@/assets/gaia-rapunzel.webp';
 import { db } from '@/lib/db';
 
 const q = Astro.url.searchParams.get('q') ?? undefined;
@@ -11,53 +12,148 @@ const orden = (Astro.url.searchParams.get('orden') ?? 'reciente') as 'reciente' 
 const productos = await db.listarProductos({ busqueda: q, orden });
 const categorias = await db.listarCategorias();
 
-/* Identidad visual compartida con la tarjeta del inicio: quien llega desde
-   «Todo para tu lotería» ve la misma textura de cartas en la cabecera, así que
-   el clic se siente como entrar a la categoría y no como caer en una búsqueda
-   cualquiera. Se normaliza a minúsculas porque `q` viene de la URL y la escribe
-   quien quiera. Las demás búsquedas dejan `fondo` en null y la cabecera se
-   queda exactamente como estaba: papel y texto oscuro. Cuando existan los
-   fondos de las otras dos categorías, esto crece a un objeto por búsqueda. */
-const fondo = q?.trim().toLowerCase() === 'loteria' ? loteriaFondo : null;
----
+/* Identidad visual compartida con las tarjetas del inicio: quien llega desde
+   «Todo para tu lotería» o desde «Gaia Rapunzel» ve en la cabecera la misma
+   imagen de la tarjeta que acaba de pulsar.
 
+   Ninguna de las dos imágenes es apaisada —el emblema de Gaia es un cuadrado
+   perfecto y la textura de cartas es más alta que ancha— y la cabecera sí lo
+   es. Con `cover` eso obligaba a ampliarlas cinco y ocho veces para rellenar la
+   banda, y de la marca solo quedaba un trozo gigante. Así que van en `contain`:
+   la imagen entra completa, ocupando el alto de la cabecera, y se coloca a un
+   lado para no pelearse con el texto. El hueco que deja `contain` no se queda
+   vacío: debajo va la misma imagen ampliada y desenfocada, que da un fondo del
+   color exacto de la propia ilustración.
+
+   `base` es el color de suelo, el que se ve mientras carga y el que asoma por
+   las partes transparentes del desenfoque. Son los degradados de cada categoría,
+   los mismos que llevan sus tarjetas en el inicio. */
+const FONDOS: Record<string, { imagen: ImageMetadata; ancho: number; forma: string; base: string }> = {
+  loteria: {
+    imagen: loteriaFondo,
+    ancho: 640,
+    /* La textura es vertical (736×1104) y, al revés que las otras dos, es una
+       fotografía rectangular con bordes rectos, no un recorte con
+       transparencia. Entera y sin más se veía como una foto pegada en mitad de
+       la cabecera, así que se le redondean las esquinas: así se lee como una
+       lámina de cartas puesta ahí a propósito. */
+    forma: 'rounded-2xl ring-1 ring-white/15',
+    base: 'bg-gradient-to-br from-[#05283A] via-[#0C7EA6] to-[#3FD2E8]',
+  },
+  gaia: {
+    imagen: gaiaFondo,
+    ancho: 750,
+    /* Recorte con transparencia y el emblema centrado: flota solo, no necesita
+       marco ni desplazamiento. */
+    forma: '',
+    base: 'bg-gradient-to-br from-[#2A0A3D] via-[#5B1E86] to-[#9B45D8]',
+  },
+};
+
+/* `q` la escribe quien quiera en la barra de direcciones, así que se normaliza
+   antes de comparar: fuera espacios de los lados y todo a minúsculas. Cualquier
+   otra búsqueda —y la tienda sin `q`— deja `fondo` en null y la cabecera se
+   queda como estaba: papel de mostrador y texto oscuro. La página se renderiza
+   entera en el servidor en cada petición y no hay transiciones de vista de por
+   medio, así que al buscar otra cosa no puede quedarse pegado el fondo
+   anterior: sale de nuevo de este mismo cálculo. */
+const fondo = FONDOS[q?.trim().toLowerCase() ?? ''] ?? null;
+---
 <BaseLayout titulo={q ? `Resultados para “${q}”` : 'Tienda'} activo="/tienda">
+  {/* `isolate` crea el contexto de apilamiento aquí mismo, así que el z-index
+      del contenido se ordena dentro de la cabecera y no compite con el menú.
+      La altura es responsiva y no un valor fijo: crece con el ancho de la
+      ventana hasta un tope, que es lo que le deja sitio a la imagen para
+      entrar entera sin convertir la cabecera en una portada de pantalla
+      completa. En móvil la imagen se pone arriba y el texto debajo, así que
+      hace falta bastante más alto proporcional que en escritorio, donde van
+      uno al lado del otro. */}
   <div
     class:list={[
-      'relative overflow-hidden border-b',
-      fondo ? 'border-tinta-900' : 'border-tinta-200 bg-papel-mostrador',
+      'relative isolate flex flex-col justify-end overflow-hidden border-b',
+      fondo
+        ? 'border-tinta-900 sm:min-h-[clamp(19rem,30vw,23rem)]'
+        : 'border-tinta-200 bg-papel-mostrador',
     ]}
   >
     {fondo && (
       <Fragment>
-        {/* El origen mide 736 de ancho, así que se pide tal cual: pedir más solo
-            haría que Astro lo escalara hacia arriba y pesara de más sin ganar un
-            solo píxel de detalle. Sobre una banda ancha se ve algo suave, pero
-            es una textura de fondo bajo una capa oscura, no la foto de un
-            producto. */}
+        {/* 1 · El suelo de color, por si la imagen aún no ha pintado. */}
+        <span class:list={['absolute inset-0 -z-30', fondo.base]} aria-hidden="true"></span>
+
+        {/* 2 · El relleno: la misma imagen a `cover`, ampliada y desenfocada.
+               Es lo que evita las franjas vacías a los lados de la imagen
+               completa, y como sale del propio archivo el color siempre pega.
+               Se pide diminuta (384px) a propósito: va a acabar borrosa, de
+               modo que pedirla grande sería tirar bytes. El `scale-125` es
+               para que el desenfoque no deje los bordes transparentes a la
+               vista. */}
         <Image
-          src={fondo}
+          src={fondo.imagen}
           alt=""
-          width={736}
+          width={384}
           loading="eager"
           decoding="sync"
-          class="absolute inset-0 h-full w-full object-cover"
+          class="absolute inset-0 -z-20 h-full w-full scale-125 object-cover opacity-80 blur-2xl"
         />
-        {/* Más opaca que en las tarjetas del inicio, y a propósito: aquí el texto
-            es grande, corre a lo ancho y cae sobre cartas de todos los colores.
-            Con el 25% de la tarjeta, el encabezado se perdía. */}
-        <span class="absolute inset-0 bg-tinta-900/60" aria-hidden="true"></span>
+
+        {/* 3 · La imagen, entera. `object-contain` es lo que garantiza que no
+               se recorte ni se deforme: entra completa y se queda con la
+               proporción que trae de origen. La caja que la contiene es la que
+               cambia de sitio según la pantalla —arriba en móvil, a la derecha
+               a partir de `sm`— y la imagen solo tiene que llenarla. */}
+        <span
+          class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[13rem] px-6 pt-7 sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:w-[42%] sm:px-8 sm:py-7 lg:w-[38%]"
+          aria-hidden="true"
+        >
+          <Image
+            src={fondo.imagen}
+            alt=""
+            width={fondo.ancho}
+            loading="eager"
+            decoding="sync"
+            class:list={[
+              /* `h-full w-auto` en vez de `w-full`: así la caja del <img> mide
+                 exactamente lo que la imagen dibujada, y el redondeo y el filo
+                 de luz caen sobre la lámina y no sobre un rectángulo vacío más
+                 ancho que ella. `object-contain` y `max-w-full` quedan de
+                 salvaguarda para que nunca se salga ni se deforme. */
+              'mx-auto h-full w-auto max-w-full object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.45)]',
+              fondo.forma,
+            ]}
+          />
+        </span>
+
+        {/* 4 · El degradado que hace legible el texto. Cae por donde va el
+               texto y se abre hasta transparente por donde va la imagen: de
+               abajo arriba en móvil, de izquierda a derecha desde `sm`. Así no
+               tapa la ilustración para poder leer encima. */}
+        <span
+          class="absolute inset-0 -z-10 bg-gradient-to-t from-tinta-900/85 via-tinta-900/45 to-tinta-900/15 sm:bg-gradient-to-r sm:from-tinta-900/90 sm:via-tinta-900/55 sm:to-transparent"
+          aria-hidden="true"
+        ></span>
       </Fragment>
     )}
-    <div class="contenedor relative py-10">
-      <h1 class:list={['rotulo rotulo-negro text-rotulo', fondo ? 'text-white' : 'text-tinta-900']}>
-        {q ? 'Resultados' : 'Todo el catálogo'}
-      </h1>
-      <p class:list={['mt-3 max-w-lg', fondo ? 'text-white/85' : 'text-tinta-600']}>
-        {q
-          ? `Lo que encontramos para “${q}”.`
-          : 'Novedades, temporada, papelería, hogar y regalo. Todo lo que hay hoy en el mostrador.'}
-      </p>
+
+    {/* Con imagen el texto se queda en su mitad para no montarse encima de
+        ella; sin imagen, la cabecera es la de siempre. */}
+    {/* En móvil el hueco de la imagen se reserva con un `padding-top` en rem, no
+        con un porcentaje de la altura: el porcentaje se mide contra una altura
+        que a su vez depende de este contenido, y con textos de dos o tres
+        líneas el rótulo acababa montándose encima. Una reserva fija no puede
+        solaparse. Desde `sm` la imagen se va al lado y el padding vuelve a ser
+        el normal. */}
+    <div class:list={['contenedor relative z-10', fondo ? 'pb-8 pt-[14rem] sm:py-10' : 'py-10']}>
+      <div class:list={[fondo && 'sm:max-w-[56%] lg:max-w-[58%]']}>
+        <h1 class:list={['rotulo rotulo-negro text-rotulo', fondo ? 'text-white' : 'text-tinta-900']}>
+          {q ? 'Resultados' : 'Todo el catálogo'}
+        </h1>
+        <p class:list={['mt-3 max-w-lg', fondo ? 'text-white/85' : 'text-tinta-600']}>
+          {q
+            ? `Lo que encontramos para “${q}”.`
+            : 'Novedades, temporada, papelería, hogar y regalo. Todo lo que hay hoy en el mostrador.'}
+        </p>
+      </div>
     </div>
   </div>
 

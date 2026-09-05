@@ -2,20 +2,19 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import ProductCard from '@/components/commerce/ProductCard.astro';
 import { Image } from 'astro:assets';
-import gaia from '@/assets/gaia-rapunzel.webp';
+import gaiaFondo from '@/assets/gaia-rapunzel.webp';
 import loteria from '@/assets/todo-para-tu-loteria.webp';
 import loteriaFondo from '@/assets/todo-para-tu-loteria-fondo.webp';
+import temporadaFondo from '@/assets/articulos-temporada.webp';
 import { db } from '@/lib/db';
 
 const destacados = await db.listarProductos({ destacado: true, limite: 4 });
 const temporada = await db.listarProductos({ temporada: true, limite: 4 });
 const sucursales = await db.listarSucursales();
 
-/* El arte de cada vitrina es un rótulo con fondo transparente, no una
-   fotografía: por eso va en `object-contain` sobre el fondo de la tarjeta.
-
-   Los degradados son la base: lo que se ve cuando la categoría todavía no tiene
-   fondo propio, y lo que asoma en los bordes cuando sí. */
+/* Los degradados son la base de cada tarjeta: lo que se ve mientras el fondo
+   carga, y lo que asoma por los bordes transparentes de los rótulos de Gaia y
+   temporada, que no son fotografías sino arte recortado. */
 const degradados = {
   loteria: 'bg-gradient-to-br from-[#05283A] via-[#0C7EA6] to-[#3FD2E8]',
   gaia: 'bg-gradient-to-br from-[#2A0A3D] via-[#5B1E86] to-[#9B45D8]',
@@ -25,14 +24,32 @@ const degradados = {
 /* Las tres categorías principales del inicio. Son el primer bloque de la página:
    debajo del menú no hay nada más antes de ellas.
 
-   `imagen` y `fondoImagen` son cosas distintas y conviene no confundirlas:
-   `imagen` es el rótulo recortado que va centrado y en `object-contain`, y
-   `fondoImagen` la textura que cubre la tarjeta entera por debajo, en
-   `object-cover`. Hoy solo lotería tiene fondo propio; las otras dos se quedan
-   con su degradado hasta que existan los archivos, y en cuanto existan basta con
-   importarlos arriba y ponerlos en `fondoImagen`, que el marcado ya los pinta.
-   Estirar un rótulo con transparencia a `cover` no vale como sustituto: se
-   recorta por los lados y se deforma. */
+   Cada una lleva ahora su propia imagen de fondo, por debajo del texto y sin
+   repetirse. Son fondos decorativos: van en posición absoluta dentro de la
+   tarjeta, no ocupan sitio en el flujo y llevan `alt=""` porque el nombre de la
+   categoría ya está escrito debajo en texto real.
+
+   `encuadre` es cómo cubre cada fondo, y no es igual en las tres porque las
+   imágenes tampoco lo son:
+
+   - Lotería es una fotografía de cartas, sin punto focal y sin nada que leer:
+     `object-cover` centrado la estira hasta cubrir la tarjeta y da igual qué
+     borde se recorte.
+   - Gaia y temporada no son fotografías sino rótulos con letras hasta el borde,
+     y ahí `cover` se los come: el de temporada es apaisado (1000×557) contra
+     una tarjeta casi cuadrada, así que cubrir el alto dejaba «EMPORAD» en
+     pantalla. Por eso estos dos cubren el ancho completo y crecen a lo alto lo
+     que les toque, centrados. Llenan la tarjeta de lado a lado igual que un
+     `cover`, pero sin decapitar la palabra; el degradado de la categoría, que
+     ya estaba, es lo que asoma por arriba y por abajo.
+   - Temporada además va un poco por encima del centro (42% en vez de 50%):
+     centrado del todo, el rótulo caía justo sobre el título y el botón.
+
+   `imagen` es cosa aparte: el rótulo suelto que va centrado en la mitad de
+   arriba, por encima del fondo. Solo lotería lo lleva, porque su fondo es una
+   textura y necesita algo que diga de qué categoría se trata. Gaia y temporada
+   no lo llevan: su propio fondo ya es el rótulo, y ponerlo dos veces sería la
+   misma imagen encima de sí misma. */
 const vitrinas = [
   {
     nombre: 'Todo para tu lotería',
@@ -40,14 +57,16 @@ const vitrinas = [
     href: '/tienda?q=loteria',
     imagen: loteria,
     fondoImagen: loteriaFondo,
+    encuadre: 'inset-y-0 h-full w-full object-cover object-center',
     fondo: degradados.loteria,
   },
   {
     nombre: 'Gaia Rapunzel',
     texto: 'Productos artesanales · cuidado capilar',
     href: '/tienda?q=gaia',
-    imagen: gaia,
-    fondoImagen: null,
+    imagen: null,
+    fondoImagen: gaiaFondo,
+    encuadre: 'top-1/2 h-auto w-full -translate-y-1/2',
     fondo: degradados.gaia,
   },
   {
@@ -55,7 +74,8 @@ const vitrinas = [
     texto: 'Novedades para cada celebración',
     href: '/temporada',
     imagen: null,
-    fondoImagen: null,
+    fondoImagen: temporadaFondo,
+    encuadre: 'top-[42%] h-auto w-full -translate-y-1/2',
     fondo: degradados.temporada,
   },
 ];
@@ -64,11 +84,12 @@ const vitrinas = [
    que el navegador descargue un solo archivo. */
 const ANCHO_ROTULO = 760;
 
-/* Ancho del fondo de tarjeta. Con tres a lo ancho del contenedor cada una ronda
-   los 380px en escritorio, así que en pantallas de doble densidad pediríamos
-   760. Justo lo que da el origen: todo-para-tu-loteria-fondo.webp mide 736 de
-   ancho y ese es el techo. El adaptador redondea al alza dentro de
-   `imagesConfig.sizes` de astro.config.mjs, así que acaban pidiéndose 750. */
+/* Ancho de los fondos de tarjeta. Con tres a lo ancho del contenedor cada una
+   ronda los 380px en escritorio, así que en pantallas de doble densidad
+   pediríamos 760. El origen de lotería mide 736 de ancho y ese es el techo de
+   los tres, así que se pide justo por debajo. El adaptador redondea al alza
+   dentro de `imagesConfig.sizes` de astro.config.mjs, así que acaban
+   pidiéndose 750. */
 const ANCHO_FONDO = 720;
 
 /* La franja de confianza. Se declara aquí y no en el marcado porque son cuatro
@@ -130,16 +151,21 @@ const mapaDe = (nombre: string, direccion: string) =>
                 v.fondo,
               ]}
             >
-              {v.fondoImagen && (
-                <Image
-                  src={v.fondoImagen}
-                  alt=""
-                  width={ANCHO_FONDO}
-                  loading="eager"
-                  decoding="sync"
-                  class="absolute inset-0 h-full w-full object-cover"
-                />
-              )}
+              {/* El fondo de la tarjeta. Va en posición absoluta y por eso no
+                  ocupa sitio en el flujo: se comporta como un `background-image`
+                  sin repetir, pero pasando por el pipeline de imágenes de Astro,
+                  que sirve el archivo en el tamaño que toca en vez de mandar el
+                  original entero. El `overflow-hidden` de la tarjeta es lo que
+                  recorta lo que sobresale, y el `alt=""` es correcto: el nombre
+                  de la categoría está escrito debajo en texto de verdad. */}
+              <Image
+                src={v.fondoImagen}
+                alt=""
+                width={ANCHO_FONDO}
+                loading="eager"
+                decoding="sync"
+                class:list={['absolute inset-x-0', v.encuadre]}
+              />
 
               {/* Una sola capa en degradado en vez de un velo parejo: arriba deja
                   ver la ilustración casi limpia y abajo se cierra lo suficiente
@@ -151,11 +177,12 @@ const mapaDe = (nombre: string, direccion: string) =>
                 aria-hidden="true"
               ></span>
 
-              {/* La ilustración ocupa la mitad de arriba y va por encima de la
+              {/* El rótulo suelto de las tarjetas cuyo fondo es una textura y no
+                  un letrero. Ocupa la mitad de arriba y va por encima de la
                   capa, para que no se apague. El texto se queda abajo, donde la
                   capa sí está cerrada. */}
-              <span class="absolute inset-x-0 top-0 flex h-[58%] items-center justify-center p-6">
-                {v.imagen ? (
+              {v.imagen && (
+                <span class="absolute inset-x-0 top-0 flex h-[58%] items-center justify-center p-6">
                   <Image
                     src={v.imagen}
                     alt=""
@@ -164,14 +191,8 @@ const mapaDe = (nombre: string, direccion: string) =>
                     decoding="sync"
                     class="max-h-full w-auto object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105"
                   />
-                ) : (
-                  <span class="flex items-center gap-3 text-5xl transition-transform duration-300 group-hover:scale-105" aria-hidden="true">
-                    <span class="-rotate-12">🍁</span>
-                    <span class="translate-y-2 text-6xl">❄️</span>
-                    <span class="rotate-12">🎃</span>
-                  </span>
-                )}
-              </span>
+                </span>
+              )}
 
               <span class="relative p-6">
                 <span class="block text-lg font-bold leading-snug text-white">{v.nombre}</span>

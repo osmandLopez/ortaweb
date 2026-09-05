@@ -2,48 +2,110 @@
 import { Image } from 'astro:assets';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import ProductCard from '@/components/commerce/ProductCard.astro';
-import rotulo from '@/assets/articulos-temporada.webp';
+import fondoTemporada from '@/assets/articulos-temporada.webp';
 import { db } from '@/lib/db';
 import { descuento } from '@/lib/money';
 
 const productos = await db.listarProductos({ temporada: true });
 const mayorRebaja = productos.reduce((max, p) => Math.max(max, descuento(p.precio, p.precioAnterior) ?? 0), 0);
----
 
+/* El rótulo de temporada pasó de ir en primer plano a ser el fondo de esta
+   sección, la misma imagen que lleva su tarjeta en el inicio: quien pulsa ahí
+   llega y reconoce dónde ha caído. Como ya no está delante, el h1 vuelve a ser
+   texto de verdad con la tipografía de rótulo del sitio.
+
+   Va en `contain`, no en `cover`. El rótulo mide 1000×557 y la sección es mucho
+   más apaisada que eso: rellenarla con `cover` obligaba a ampliarlo al doble y
+   dejaba «TEMPORADA» partida por los lados. En `contain` entra entero, con su
+   proporción intacta, y el hueco lo cubre la misma imagen ampliada y
+   desenfocada por debajo.
+
+   Se pide a 750 porque en pantalla nunca pasa de unos 620 de ancho; el
+   desenfoque, a 384, que para acabar borroso sobra. Los dos valores están en la
+   lista de `imagesConfig.sizes` de astro.config.mjs. */
+const ANCHO_ROTULO = 750;
+const ANCHO_DESENFOQUE = 384;
+---
 <BaseLayout
   titulo="Ventas de temporada"
   descripcion="Rebajas de temporada en Orta Novedades. Precios de calendario mientras dure la existencia."
   activo="/temporada"
 >
-  <section class="bg-oro-500">
-    <div class="contenedor grid items-center gap-10 py-14 lg:grid-cols-[1.1fr_0.9fr]">
-      <div>
-        {/* El rótulo es el encabezado de la sección: lleva el texto en el alt
-            para que la página conserve su h1 sin duplicarlo en pantalla. */}
-        <h1>
-          <Image
-            src={rotulo}
-            alt="Artículos de temporada"
-            width={640}
-            height={357}
-            loading="eager"
-            class="w-full max-w-md drop-shadow-sm lg:max-w-lg"
-          />
-        </h1>
-        <p class="mt-7 max-w-md text-lg leading-relaxed text-tinta-800">
+  {/* El `bg-oro-500` se queda como suelo: es el color que se ve el instante que
+      tarda la imagen en pintar. Va debajo de todo, no encima, así que no tapa
+      la ilustración ni la tiñe. La altura es responsiva y crece con la ventana:
+      es lo que le deja sitio al rótulo para entrar entero. */}
+  <section class="relative isolate flex flex-col justify-end overflow-hidden bg-oro-500 sm:min-h-[clamp(20rem,32vw,24rem)]">
+    {/* 1 · Relleno: el propio rótulo ampliado y desenfocado. Cubre el hueco que
+           deja `contain` con el color exacto de la imagen, en vez de con una
+           franja de oro macizo. */}
+    <Image
+      src={fondoTemporada}
+      alt=""
+      width={ANCHO_DESENFOQUE}
+      loading="eager"
+      decoding="sync"
+      class="absolute inset-0 -z-20 h-full w-full scale-125 object-cover opacity-80 blur-2xl"
+    />
+
+    {/* 2 · El rótulo, entero. Arriba en móvil y a la derecha desde `sm`, que es
+           donde el texto le deja sitio. `object-contain` es lo que impide que se
+           recorte o se deforme. */}
+    <span
+      class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[13rem] px-6 pt-7 sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:w-[44%] sm:px-8 sm:py-8 lg:w-[40%]"
+      aria-hidden="true"
+    >
+      <Image
+        src={fondoTemporada}
+        alt=""
+        width={ANCHO_ROTULO}
+        loading="eager"
+        decoding="sync"
+        class="mx-auto h-full w-auto max-w-full object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+      />
+    </span>
+
+    {/* 3 · El degradado de legibilidad. Neutro, nunca amarillo: el encargo era
+           sacar el oro macizo de delante de la imagen y no vuelve disfrazado de
+           velo. Cierra por donde va el texto y se abre hasta transparente por
+           donde va el rótulo. */}
+    <span
+      class="absolute inset-0 -z-10 bg-gradient-to-t from-tinta-900/85 via-tinta-900/45 to-tinta-900/15 sm:bg-gradient-to-r sm:from-tinta-900/90 sm:via-tinta-900/55 sm:to-transparent"
+      aria-hidden="true"
+    ></span>
+
+    {/* El contenido se queda en su mitad para no montarse sobre el rótulo.
+
+        El h1 va oculto a la vista y no por descuido: ahora que el rótulo entra
+        entero y se lee «Artículos de temporada» de un vistazo, escribir lo
+        mismo al lado en letra grande era decirlo dos veces. El título sigue
+        estando para quien navega con lector de pantalla y para los buscadores,
+        que es justo como estaba antes de todo esto, cuando el h1 era la propia
+        imagen con su texto en el `alt`. Lo que queda a la vista es lo que no
+        dice el rótulo: de qué va la temporada y cuánto se rebaja. */}
+    {/* En móvil el hueco del rótulo se reserva con un `padding-top` en rem y no
+        con un porcentaje: el porcentaje se mide contra una altura que depende de
+        este mismo contenido, y el rótulo acababa cayendo sobre la primera línea
+        del párrafo. Desde `sm` el rótulo se va al lado y el padding es el
+        normal. */}
+    <div class="contenedor relative z-10 pb-10 pt-[14rem] sm:py-12">
+      <div class="sm:max-w-[54%] lg:max-w-[52%]">
+        <h1 class="sr-only">Artículos de temporada</h1>
+
+        <p class="max-w-md leading-relaxed text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] sm:text-lg">
           Navidad, regreso a clases y todo lo que se mueve con el calendario. Cuando se
           acaba la existencia, se acaba el precio.
         </p>
-      </div>
 
-      {mayorRebaja > 0 && (
-        <p class="lg:justify-self-end lg:text-right">
-          <span class="etiqueta block text-oro-900">Hasta</span>
-          <span class="rotulo rotulo-negro block text-rotulo-xl leading-none text-tinta-900">
-            −{mayorRebaja}%
-          </span>
-        </p>
-      )}
+        {mayorRebaja > 0 && (
+          <p class="mt-7">
+            <span class="etiqueta block text-oro-200 drop-shadow-[0_1px_6px_rgba(0,0,0,0.8)]">Hasta</span>
+            <span class="rotulo rotulo-negro block text-rotulo-xl leading-none text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.55)]">
+              −{mayorRebaja}%
+            </span>
+          </p>
+        )}
+      </div>
     </div>
   </section>
 
