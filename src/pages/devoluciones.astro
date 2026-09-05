@@ -1,0 +1,183 @@
+---
+import PaginaTexto from '@/components/layout/PaginaTexto.astro';
+import SeccionTexto from '@/components/layout/SeccionTexto.astro';
+
+/*
+ * Política de cambios y devoluciones. El contenido lo contestó el dueño en el
+ * cuestionario del 3 de septiembre de 2026; aquí solo está redactado.
+ *
+ * Dos decisiones que no salieron tal cual del cuestionario y conviene recordar:
+ *
+ * 1. El dueño dijo "3 días hábiles". Ese plazo se conserva para los reclamos por
+ *    producto dañado o equivocado, pero la devolución por arrepentimiento va a 5
+ *    días hábiles: es el mínimo que da la Ley Federal de Protección al Consumidor
+ *    en ventas a distancia y no se puede recortar por política de tienda.
+ * 2. "Depende de la mediación con el cliente" no se puede publicar tal cual, así
+ *    que quedaron fijados los dos casos claros —llegó mal lo paga la tienda, ya no
+ *    lo quiero lo paga el cliente— y lo demás sigue abierto a acuerdo.
+ */
+const WHATSAPP_VISIBLE = '81 2563 7098';
+const WHATSAPP = 'https://wa.me/528125637098';
+
+const secciones = [
+  { id: 'plazos', titulo: 'Cuánto tiempo tienes' },
+  { id: 'estado', titulo: 'Cómo tiene que venir el producto' },
+  { id: 'excepciones', titulo: 'Lo que no podemos recibir' },
+  { id: 'video', titulo: 'El video de apertura' },
+  { id: 'como', titulo: 'Cómo empezar la devolución' },
+  { id: 'envio', titulo: 'Quién paga el envío de regreso' },
+  { id: 'dinero', titulo: 'Cuándo llega tu dinero' },
+  { id: 'sucursal', titulo: 'Devolver en la tienda' },
+];
+
+/* El resumen de arriba es lo que casi todo el mundo viene a buscar: que se lea
+   sin bajar y sin abrir ninguna sección. */
+const resumen = [
+  { dato: '5 días hábiles', pie: 'para devolver algo que no te convenció, contados desde que lo recibes' },
+  { dato: '3 días hábiles', pie: 'para avisar si llegó roto, incompleto o equivocado' },
+  { dato: 'Video de apertura', pie: 'indispensable para cualquier reclamo por daño o error' },
+  { dato: 'WhatsApp', pie: 'la única vía para iniciarlo, con tu número de pedido a la mano' },
+];
+---
+
+<PaginaTexto
+  etiqueta="Ayuda"
+  titulo="Cambios y devoluciones"
+  entradilla="Qué pasa si algo llegó mal o si simplemente no era lo que esperabas. Aquí están los plazos, las condiciones y los pasos, sin letra chiquita."
+  descripcion="Plazos, condiciones y pasos para cambiar o devolver un producto comprado en Orta Novedades, en línea o en sucursal."
+  actualizado="3 de septiembre de 2026"
+  secciones={secciones}
+>
+  <ul class="grid gap-4 sm:grid-cols-2">
+    {resumen.map((r) => (
+      <li class="rounded-2xl border border-tinta-200 bg-white p-5 shadow-sm">
+        <p class="rotulo text-lg text-tinta-900">{r.dato}</p>
+        <p class="mt-2 text-sm leading-relaxed text-tinta-600">{r.pie}</p>
+      </li>
+    ))}
+  </ul>
+
+  <SeccionTexto id="plazos" titulo="Cuánto tiempo tienes">
+    <p>
+      <strong>Si el producto no te convenció</strong>, tienes <strong>5 días hábiles</strong> para pedir
+      el cambio o la devolución. El plazo empieza el día en que recibes el paquete, no el día en que
+      compraste.
+    </p>
+    <p>
+      <strong>Si el producto llegó roto, incompleto o no es el que pediste</strong>, avísanos dentro de
+      los <strong>3 días hábiles</strong> siguientes a la entrega y mándanos el video de apertura del
+      paquete. Entre más pronto nos digas, más fácil es reclamarle a la paquetería.
+    </p>
+    <p>
+      Si el problema aparece después —una falla de fábrica que no se veía al abrirlo— escríbenos de
+      todos modos. Esos casos los revisamos uno por uno.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="estado" titulo="Cómo tiene que venir el producto">
+    <p>Para aceptarlo de vuelta necesitamos las tres cosas, sin excepción:</p>
+    <ul class="ml-5 list-disc space-y-2 marker:text-tinta-400">
+      <li><strong>Sin usar.</strong></li>
+      <li><strong>Con todas sus etiquetas puestas</strong>, tal como te llegó.</li>
+      <li><strong>En su empaque original</strong>, completo y en buen estado.</li>
+    </ul>
+    <p>
+      No hace falta que guardes el ticket impreso: con tu número de pedido o el correo de confirmación
+      es suficiente para encontrarte en el sistema.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="excepciones" titulo="Lo que no podemos recibir">
+    <p>
+      <strong>Shampoo y cualquier producto de cuidado personal que venga abierto o usado.</strong> Una
+      vez roto el sello no podemos volver a venderlo ni garantizar que esté completo, así que no lo
+      aceptamos de vuelta en ningún caso.
+    </p>
+    <p>
+      Esto no aplica si el producto <em>llegó</em> abierto, derramado o dañado dentro del paquete: eso
+      es un problema de envío y sí lo cubrimos. Para probarlo necesitamos el video de apertura.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="video" titulo="El video de apertura">
+    <p>
+      Es el único requisito que no podemos saltarnos. Cualquier reclamo por un producto
+      <strong>roto, incompleto o equivocado</strong> tiene que venir acompañado del video en que abres
+      el paquete.
+    </p>
+    <p>Para que sirva, el video tiene que:</p>
+    <ul class="ml-5 list-disc space-y-2 marker:text-tinta-400">
+      <li>Empezar con el paquete todavía cerrado y la guía de la paquetería visible.</li>
+      <li>Ser continuo, de una sola toma, sin cortes ni pausas.</li>
+      <li>Terminar mostrando el producto y el problema.</li>
+    </ul>
+    <p>
+      Suena exagerado, pero es lo único que la paquetería acepta como prueba. Sin video, el reclamo se
+      queda sin respaldo y nadie responde por el daño.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="como" titulo="Cómo empezar la devolución">
+    <p>
+      Todo empieza por <strong>WhatsApp con tu vendedor</strong>, al
+      <a href={WHATSAPP} target="_blank" rel="noopener noreferrer">{WHATSAPP_VISIBLE}</a>. No hay
+      formulario que llenar ni correo que mandar: escríbenos y te contestamos en horario de tienda.
+    </p>
+    <p>Ten a la mano estos tres datos, así se resuelve en un solo mensaje:</p>
+    <ul class="ml-5 list-decimal space-y-2 marker:font-nota marker:text-tinta-400">
+      <li>Tu <strong>número de pedido</strong>, que viene en el correo de confirmación.</li>
+      <li>Qué pasó, en una línea.</li>
+      <li>Fotos del producto y, si llegó mal, el video de apertura.</li>
+    </ul>
+    <p>
+      Ahí mismo acordamos contigo qué prefieres: <strong>que te regresemos el dinero</strong>,
+      <strong>cambiarlo por otro producto</strong> o <strong>dejarte un vale a favor</strong> para tu
+      siguiente compra.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="envio" titulo="Quién paga el envío de regreso">
+    <ul class="ml-5 list-disc space-y-2 marker:text-tinta-400">
+      <li>
+        <strong>Llegó roto, incompleto o equivocado:</strong> lo pagamos nosotros. Te mandamos la guía
+        de regreso por WhatsApp y no tienes que desembolsar nada.
+      </li>
+      <li>
+        <strong>Ya no lo quieres, o pediste la talla o el color equivocado:</strong> el envío de regreso
+        corre por tu cuenta.
+      </li>
+    </ul>
+    <p>
+      Cualquier caso que no entre en esos dos lo vemos con el vendedor y llegamos a un acuerdo antes de
+      que mandes nada.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="dinero" titulo="Cuándo llega tu dinero">
+    <p>
+      Contamos desde que el producto está de vuelta en la tienda y lo revisamos: a partir de ahí hacemos
+      el reembolso en un máximo de <strong>3 días hábiles</strong>.
+    </p>
+    <p>
+      El dinero regresa <strong>a la misma tarjeta con la que pagaste</strong>. No podemos mandarlo a
+      otra cuenta ni entregarlo en efectivo: así funciona el sistema de pagos, no es una regla de la
+      tienda.
+    </p>
+    <p>
+      Una vez que lo enviamos, <strong>tu banco puede tardar entre 5 y 10 días hábiles más</strong> en
+      reflejarlo en tu estado de cuenta. Ese tiempo ya no depende de nosotros.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="sucursal" titulo="Devolver en la tienda">
+    <p>
+      Sí. Lo que compraste por internet puedes devolverlo en cualquiera de nuestras sucursales: te
+      ahorras el envío de regreso y lo resolvemos en el mostrador.
+    </p>
+    <p>
+      Lleva el producto en las condiciones de arriba y tu número de pedido. Antes de ir, avísanos por
+      WhatsApp para que te esperemos con el caso ya revisado. Las direcciones y los horarios están en
+      <a href="/contacto">Contacto</a>.
+    </p>
+  </SeccionTexto>
+</PaginaTexto>

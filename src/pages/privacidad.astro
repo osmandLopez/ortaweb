@@ -1,0 +1,181 @@
+---
+import PaginaTexto from '@/components/layout/PaginaTexto.astro';
+import SeccionTexto from '@/components/layout/SeccionTexto.astro';
+
+/*
+ * Aviso de privacidad. Los datos del responsable los dio el dueño en el
+ * cuestionario del 3 de septiembre de 2026.
+ *
+ * Lo que se dice aquí tiene que seguir siendo verdad en el código: si algún día
+ * se añade analítica, píxel de Facebook o cualquier cookie de terceros, hay que
+ * volver a esta página antes de subirlo. Hoy no hay ninguna.
+ */
+const RESPONSABLE = 'José de Jesús Guadalupe Orta Álvarez';
+const DOMICILIO = 'Av. Zempoala 7908, Col. Lomas Modelo, Monterrey, Nuevo León, México';
+const CORREO_DATOS = 'comercializadora.orta@gmail.com';
+
+const secciones = [
+  { id: 'responsable', titulo: 'Quién responde por tus datos' },
+  { id: 'datos', titulo: 'Qué datos te pedimos' },
+  { id: 'tarjeta', titulo: 'Tu tarjeta no pasa por aquí' },
+  { id: 'para-que', titulo: 'Para qué los usamos' },
+  { id: 'promociones', titulo: 'Correos de novedades' },
+  { id: 'terceros', titulo: 'Con quién los compartimos' },
+  { id: 'cookies', titulo: 'Cookies' },
+  { id: 'arco', titulo: 'Cómo pedir que los borremos' },
+  { id: 'menores', titulo: 'Menores de edad' },
+  { id: 'cambios', titulo: 'Cambios a este aviso' },
+];
+---
+
+<PaginaTexto
+  etiqueta="Legal"
+  titulo="Aviso de privacidad"
+  entradilla="Qué datos tuyos guardamos, para qué los usamos, con quién los compartimos y cómo pedir que los borremos."
+  descripcion="Aviso de privacidad de Orta Novedades: datos personales que recabamos, finalidades, transferencias y ejercicio de derechos ARCO."
+  actualizado="3 de septiembre de 2026"
+  secciones={secciones}
+>
+  <SeccionTexto id="responsable" titulo="Quién responde por tus datos">
+    <p>
+      <strong>{RESPONSABLE}</strong>, persona física con actividad empresarial, que opera bajo el
+      nombre comercial <strong>Orta Novedades</strong>, con domicilio en {DOMICILIO}, es el
+      responsable del uso y la protección de tus datos personales.
+    </p>
+    <p>
+      Este aviso explica qué hacemos con la información que nos das al comprar o al crear una cuenta
+      en este sitio.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="datos" titulo="Qué datos te pedimos">
+    <p>Solo los que hacen falta para venderte y entregarte lo que compraste:</p>
+    <ul class="ml-5 list-disc space-y-2 marker:text-tinta-400">
+      <li><strong>Nombre completo.</strong></li>
+      <li><strong>Correo electrónico</strong>, para mandarte la confirmación y el estado del pedido.</li>
+      <li><strong>Teléfono</strong>, para localizarte si hay un problema con la entrega.</li>
+      <li><strong>Dirección y código postal</strong>, para calcular el envío y llevarte el paquete.</li>
+      <li><strong>Tu historial de pedidos</strong>, que puedes consultar desde tu cuenta.</li>
+    </ul>
+    <p>
+      Si creas una cuenta, guardamos también tu contraseña <strong>cifrada</strong>: ni nosotros
+      podemos leerla.
+    </p>
+    <p>
+      No pedimos ni guardamos datos sensibles: nada de salud, religión, origen étnico ni preferencias
+      personales.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="tarjeta" titulo="Tu tarjeta no pasa por aquí">
+    <p>
+      Los pagos los procesa <strong>Stripe</strong>. Cuando pagas, sales de nuestro sitio a una
+      página de Stripe: el número de tu tarjeta, la fecha de vencimiento y el código de seguridad
+      <strong>se escriben ahí, no aquí</strong>.
+    </p>
+    <p>
+      Nosotros nunca vemos ni almacenamos esos datos. De cada pago solo recibimos si se aprobó o no,
+      el monto y los últimos cuatro dígitos.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="para-que" titulo="Para qué los usamos">
+    <p>Hay usos sin los cuales no podríamos venderte:</p>
+    <ul class="ml-5 list-disc space-y-2 marker:text-tinta-400">
+      <li>Procesar y cobrar tu pedido.</li>
+      <li>Prepararlo, enviarlo y darle seguimiento con la paquetería.</li>
+      <li>Avisarte por correo de la confirmación, el envío y cualquier cambio.</li>
+      <li>Atender tus dudas, cambios y devoluciones.</li>
+      <li>Mantener tu cuenta y tu historial de compras.</li>
+    </ul>
+    <p>
+      Y un uso que <strong>no</strong> es necesario para tu compra, y al que puedes negarte sin que
+      pase nada: mandarte correos de novedades y promociones.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="promociones" titulo="Correos de novedades">
+    <p>
+      Sí mandamos promociones y avisos de temporada por correo. Nunca a quien no se ha suscrito ni
+      ha comprado con nosotros, y nunca más de lo razonable.
+    </p>
+    <p>
+      Si no los quieres, dilo y listo: hay un enlace para darte de baja al final de cada correo, o
+      escríbenos a <a href={`mailto:${CORREO_DATOS}`}>{CORREO_DATOS}</a>. Darte de baja de las
+      promociones no afecta los correos de tus pedidos, que sí seguirás recibiendo porque son parte
+      de la compra.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="terceros" titulo="Con quién los compartimos">
+    <p>
+      <strong>No vendemos ni rentamos tus datos a nadie.</strong> Los compartimos únicamente con los
+      servicios que hacen falta para que el pedido llegue:
+    </p>
+    <ul class="ml-5 list-disc space-y-2 marker:text-tinta-400">
+      <li><strong>Stripe</strong>, para cobrar el pago.</li>
+      <li>
+        <strong>Estafeta, FedEx, Teammex y La Mensajería MX</strong>, según la paquetería que lleve
+        tu pedido: reciben tu nombre, dirección y teléfono, y nada más.
+      </li>
+      <li><strong>Resend</strong>, que es quien envía materialmente nuestros correos.</li>
+      <li><strong>Vercel y Turso</strong>, donde viven el sitio y la base de datos.</li>
+    </ul>
+    <p>
+      También podríamos entregarlos si una autoridad competente nos los pide por escrito y conforme a
+      la ley.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="cookies" titulo="Cookies">
+    <p>
+      Usamos <strong>una cookie propia</strong> para mantener tu sesión abierta mientras navegas, y
+      nada más. Lo que llevas en el carrito se guarda en el almacenamiento de tu propio navegador, no
+      en nuestros servidores.
+    </p>
+    <p>
+      <strong>No usamos cookies de publicidad, analítica ni rastreo de terceros.</strong> Nadie te
+      sigue desde aquí hasta otro sitio.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="arco" titulo="Cómo pedir que los borremos">
+    <p>
+      Tienes derecho a saber qué datos tuyos tenemos, a corregirlos si están mal, a pedir que los
+      borremos y a oponerte a que los usemos para algo. Se llaman derechos ARCO: acceso,
+      rectificación, cancelación y oposición.
+    </p>
+    <p>
+      Para ejercerlos, escribe a <a href={`mailto:${CORREO_DATOS}`}>{CORREO_DATOS}</a> con:
+    </p>
+    <ul class="ml-5 list-decimal space-y-2 marker:font-nota marker:text-tinta-400">
+      <li>Tu nombre completo y el correo con el que compraste.</li>
+      <li>Qué quieres: conocer, corregir, borrar o dejar de recibir.</li>
+      <li>Copia de una identificación oficial, para comprobar que eres tú.</li>
+    </ul>
+    <p>
+      Te contestamos en un máximo de <strong>20 días hábiles</strong>. Ten en cuenta que hay datos que
+      no podemos borrar de inmediato —los de un pedido en curso o los registros contables— hasta que
+      venza el plazo que la ley nos obliga a conservarlos.
+    </p>
+    <p>
+      Si crees que no respetamos tus derechos, puedes acudir a la autoridad federal en materia de
+      protección de datos personales.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="menores" titulo="Menores de edad">
+    <p>
+      Este sitio no está dirigido a menores de edad y no vendemos a menores de 18 años. No recabamos
+      datos de menores a sabiendas. Si un padre o tutor detecta que su hijo nos dejó datos, que nos
+      escriba a <a href={`mailto:${CORREO_DATOS}`}>{CORREO_DATOS}</a> y los borramos.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="cambios" titulo="Cambios a este aviso">
+    <p>
+      Si cambiamos algo de lo que dice aquí, la versión nueva se publica en esta misma página con su
+      fecha de actualización arriba. Vale la pena volver a leerla de vez en cuando.
+    </p>
+  </SeccionTexto>
+</PaginaTexto>

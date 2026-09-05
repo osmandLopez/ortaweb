@@ -1,0 +1,61 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+/*
+ * Envoltura de las páginas de texto largo: devoluciones, privacidad y términos.
+ * Nadie las lee de corrido — se llega a ellas buscando un dato concreto — así
+ * que llevan índice fijo al lado y cada sección tiene su propia ancla, para
+ * poder mandarle a un cliente el enlace exacto del párrafo que le aplica.
+ */
+interface Props {
+  etiqueta: string;
+  titulo: string;
+  entradilla: string;
+  descripcion: string;
+  /** Fecha visible de la última revisión del texto. */
+  actualizado: string;
+  secciones: { id: string; titulo: string }[];
+}
+
+const { etiqueta, titulo, entradilla, descripcion, actualizado, secciones } = Astro.props;
+---
+
+<BaseLayout titulo={titulo} descripcion={descripcion}>
+  <section class="border-b border-tinta-200 bg-papel-mostrador">
+    <div class="contenedor py-14 text-center lg:py-16">
+      <p class="etiqueta inline-flex items-center gap-2.5 text-cielo-600">
+        <span class="h-1.5 w-1.5 rounded-full bg-cielo-500" aria-hidden="true"></span>
+        {etiqueta}
+      </p>
+      <h1 class="rotulo rotulo-negro mt-5 text-4xl/tight text-tinta-900 md:text-5xl/tight">
+        {titulo}
+      </h1>
+      <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-tinta-600">{entradilla}</p>
+      <p class="mt-7 font-nota text-[11px] uppercase tracking-[0.14em] text-tinta-400">
+        Última actualización: {actualizado}
+      </p>
+    </div>
+  </section>
+
+  <div class="contenedor grid gap-12 py-14 lg:grid-cols-[16rem_1fr] lg:gap-16 lg:py-16">
+    <nav aria-label="Índice de la página" class="lg:sticky lg:top-32 lg:self-start">
+      <p class="etiqueta text-tinta-400">En esta página</p>
+      <ol class="mt-4 space-y-3">
+        {secciones.map((s, i) => (
+          <li class="flex gap-3">
+            <span class="font-nota text-[11px] tabular-nums text-tinta-400" aria-hidden="true">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <a href={`#${s.id}`} class="text-sm leading-snug text-tinta-600 hover:text-cielo-600">
+              {s.titulo}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+
+    <div class="max-w-2xl space-y-14">
+      <slot />
+    </div>
+  </div>
+</BaseLayout>

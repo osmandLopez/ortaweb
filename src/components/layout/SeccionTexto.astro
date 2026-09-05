@@ -1,0 +1,18 @@
+---
+/*
+ * Una sección de las páginas de texto. El id lo comparte con el índice de
+ * PaginaTexto, así que si se renombra aquí hay que renombrarlo allá.
+ */
+interface Props {
+  id: string;
+  titulo: string;
+}
+const { id, titulo } = Astro.props;
+---
+
+<section id={id} class="scroll-mt-32">
+  <h2 class="rotulo text-2xl text-tinta-900">{titulo}</h2>
+  <div class="mt-5 space-y-4 leading-relaxed text-tinta-700 [&_a]:font-bold [&_a]:text-cielo-600 [&_a:hover]:underline [&_strong]:text-tinta-900">
+    <slot />
+  </div>
+</section>

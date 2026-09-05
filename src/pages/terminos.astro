@@ -1,0 +1,222 @@
+---
+import PaginaTexto from '@/components/layout/PaginaTexto.astro';
+import SeccionTexto from '@/components/layout/SeccionTexto.astro';
+import { UMBRAL_ENVIO_GRATIS } from '@/lib/shipping';
+
+/*
+ * Términos y condiciones de venta. Contestados por el dueño el 3 de septiembre
+ * de 2026.
+ *
+ * El umbral de envío gratis se lee de shipping.ts a propósito: es el mismo
+ * número que cobra el checkout, y si alguien lo cambia allá esta página no puede
+ * quedarse mintiendo.
+ */
+const RESPONSABLE = 'José de Jesús Guadalupe Orta Álvarez';
+const DOMICILIO = 'Av. Zempoala 7908, Col. Lomas Modelo, Monterrey, Nuevo León, México';
+const CORREO = 'comercializadora.orta@gmail.com';
+const WHATSAPP_VISIBLE = '81 2563 7098';
+const WHATSAPP = 'https://wa.me/528125637098';
+
+const envioGratis = (UMBRAL_ENVIO_GRATIS / 100).toLocaleString('es-MX', {
+  style: 'currency',
+  currency: 'MXN',
+  maximumFractionDigits: 0,
+});
+
+const secciones = [
+  { id: 'quien-vende', titulo: 'Quién te vende' },
+  { id: 'precios', titulo: 'Precios e IVA' },
+  { id: 'factura', titulo: 'Facturación' },
+  { id: 'pago', titulo: 'Cómo se paga' },
+  { id: 'pedido', titulo: 'Cuándo queda firme tu pedido' },
+  { id: 'cancelar', titulo: 'Cancelar un pedido pagado' },
+  { id: 'agotado', titulo: 'Si algo se agota después de tu pago' },
+  { id: 'precio-mal', titulo: 'Si un precio sale mal puesto' },
+  { id: 'fotos', titulo: 'Fotos y descripciones' },
+  { id: 'envios', titulo: 'Envíos y entregas' },
+  { id: 'devoluciones', titulo: 'Cambios y devoluciones' },
+  { id: 'cuenta', titulo: 'Tu cuenta y tu contraseña' },
+  { id: 'mayoria-edad', titulo: 'Mayoría de edad' },
+  { id: 'contenido', titulo: 'Contenido del sitio' },
+  { id: 'ley', titulo: 'Ley aplicable y tribunales' },
+];
+---
+
+<PaginaTexto
+  etiqueta="Legal"
+  titulo="Términos y condiciones"
+  entradilla="Las reglas de la venta: precios, pagos, cancelaciones y qué pasa el día que algo sale mal. Al comprar en este sitio las estás aceptando."
+  descripcion="Términos y condiciones de venta de Orta Novedades: precios, pagos, cancelaciones, faltantes de existencia, envíos y jurisdicción aplicable."
+  actualizado="3 de septiembre de 2026"
+  secciones={secciones}
+>
+  <SeccionTexto id="quien-vende" titulo="Quién te vende">
+    <p>
+      Quien vende en este sitio es <strong>{RESPONSABLE}</strong>, persona física con actividad
+      empresarial, que opera bajo el nombre comercial <strong>Orta Novedades</strong>, con domicilio
+      en {DOMICILIO}.
+    </p>
+    <p>
+      Para cualquier aclaración: <a href={`mailto:${CORREO}`}>{CORREO}</a> o WhatsApp al
+      <a href={WHATSAPP} target="_blank" rel="noopener noreferrer">{WHATSAPP_VISIBLE}</a>.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="precios" titulo="Precios e IVA">
+    <p>
+      Todos los precios están en <strong>pesos mexicanos</strong> y <strong>ya llevan el IVA
+      incluido</strong>. Lo que ves en la etiqueta del producto es lo que se cobra; al final se suma
+      el envío, que se calcula con tu código postal antes de pagar.
+    </p>
+    <p>
+      Los precios pueden cambiar en cualquier momento. El que vale para tu compra es el que aparecía
+      cuando pagaste.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="factura" titulo="Facturación">
+    <p>
+      <strong>Por el momento no emitimos factura.</strong> Las ventas de este sitio se registran como
+      público en general. Si tu compra necesita comprobante fiscal, escríbenos
+      <strong>antes de pagar</strong> a <a href={`mailto:${CORREO}`}>{CORREO}</a> para ver si podemos
+      resolverlo por otra vía.
+    </p>
+    <p>De cada pedido sí recibes tu correo de confirmación con el detalle y el total pagado.</p>
+  </SeccionTexto>
+
+  <SeccionTexto id="pago" titulo="Cómo se paga">
+    <p>
+      El pago se hace con <strong>tarjeta de crédito o débito, Apple Pay o Google Pay</strong>, a
+      través de <strong>Stripe</strong>. Al pagar sales a una página de Stripe: los datos de tu
+      tarjeta se escriben allá y nosotros nunca los vemos.
+    </p>
+    <p>
+      Si tu banco rechaza el cargo, el pedido no se genera. Puedes volver a intentarlo o pagar con
+      otra tarjeta.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="pedido" titulo="Cuándo queda firme tu pedido">
+    <p>
+      Tu pedido queda confirmado cuando el pago se aprueba y te llega el
+      <strong>correo de confirmación con tu número de pedido</strong>. Ese correo es tu comprobante:
+      guárdalo, es lo que te pedimos para cualquier aclaración, cambio o devolución.
+    </p>
+    <p>
+      Si pagaste y no te llegó el correo en unos minutos, revisa tu carpeta de correo no deseado y, si
+      no está, escríbenos.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="cancelar" titulo="Cancelar un pedido pagado">
+    <p>
+      Sí se puede, <strong>el mismo día en que hiciste el pago</strong>. Avísanos por WhatsApp al
+      <a href={WHATSAPP} target="_blank" rel="noopener noreferrer">{WHATSAPP_VISIBLE}</a> con tu
+      número de pedido y te devolvemos el importe completo.
+    </p>
+    <p>
+      Después de ese día el pedido ya salió a preparación o a la paquetería, y lo que aplica entonces
+      es la <a href="/devoluciones">política de cambios y devoluciones</a>.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="agotado" titulo="Si algo se agota después de tu pago">
+    <p>
+      Pasa: el inventario de la tienda física y el del sitio pueden desfasarse por unas horas. Si
+      pagaste algo que ya no tenemos, te avisamos en cuanto lo detectemos y <strong>tú eliges</strong>:
+    </p>
+    <ul class="ml-5 list-disc space-y-2 marker:text-tinta-400">
+      <li>Que te <strong>devolvamos el dinero</strong> de ese producto, o</li>
+      <li>Que te mandemos <strong>otro parecido</strong> del mismo valor, si te late alguna opción.</li>
+    </ul>
+    <p>Nunca te cambiamos un producto por otro sin preguntarte primero.</p>
+  </SeccionTexto>
+
+  <SeccionTexto id="precio-mal" titulo="Si un precio sale mal puesto">
+    <p>
+      Si por un error de captura un producto aparece con un precio que no es el suyo,
+      <strong>cancelamos la venta y te devolvemos el 100% de lo que pagaste</strong>. Te avisamos por
+      correo o WhatsApp antes de hacerlo.
+    </p>
+    <p>Un precio equivocado no obliga a la tienda a vender a ese precio.</p>
+  </SeccionTexto>
+
+  <SeccionTexto id="fotos" titulo="Fotos y descripciones">
+    <p>
+      Las fotos son de referencia. <strong>El producto real puede variar un poco</strong> en tono,
+      textura, presentación o empaque respecto de lo que ves en pantalla: influyen la iluminación de
+      la foto, la calibración de tu pantalla y los cambios de presentación del proveedor.
+    </p>
+    <p>
+      Una diferencia razonable de tono o empaque no se considera producto equivocado. Si lo que te
+      llegó es <em>otro</em> producto, eso sí lo cubre la
+      <a href="/devoluciones">política de devoluciones</a>.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="envios" titulo="Envíos y entregas">
+    <p>
+      Enviamos a todo México con <strong>Estafeta, FedEx y Teammex</strong>, y dentro del área
+      metropolitana de Monterrey también con <strong>La Mensajería MX</strong>. El costo se calcula
+      con tu código postal antes de pagar, y a partir de {envioGratis} de compra el
+      <strong>envío estándar va sin costo</strong>.
+    </p>
+    <p>
+      Los tiempos que ves al elegir el envío son <strong>estimados de la paquetería</strong>, no una
+      fecha garantizada: un retraso de la paquetería, un domicilio incompleto o que no haya quien
+      reciba pueden moverla.
+    </p>
+    <p>
+      También puedes elegir <strong>recoger en tienda</strong> sin pagar envío. Te avisamos cuando tu
+      pedido esté listo.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="devoluciones" titulo="Cambios y devoluciones">
+    <p>
+      Todo lo relativo a plazos, condiciones del producto, quién paga el envío de regreso y cuándo
+      llega el reembolso está en la página de
+      <a href="/devoluciones">cambios y devoluciones</a>, que forma parte de estos términos.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="cuenta" titulo="Tu cuenta y tu contraseña">
+    <p>
+      Puedes comprar con o sin cuenta. Si creas una, los datos que registres tienen que ser
+      verdaderos, y tú eres responsable de lo que se haga desde ella: cuida tu contraseña y no la
+      compartas.
+    </p>
+    <p>
+      Si crees que alguien más entró a tu cuenta, avísanos y cambia tu contraseña de inmediato. Podemos
+      suspender cuentas que se usen para fraude o para dañar el sitio.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="mayoria-edad" titulo="Mayoría de edad">
+    <p>
+      Para comprar en este sitio hay que ser <strong>mayor de edad</strong>. Los menores de 18 años no
+      pueden hacer pedidos; si quieren algo de la tienda, la compra la hace su padre, madre o tutor.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="contenido" titulo="Contenido del sitio">
+    <p>
+      Las fotos, los textos, el logotipo y el diseño de este sitio son de Orta Novedades o de quien nos
+      autorizó a usarlos. Puedes verlos y compartirlos, pero no copiarlos para vender ni para otro
+      sitio sin nuestro permiso por escrito.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="ley" titulo="Ley aplicable y tribunales">
+    <p>
+      Estos términos se rigen por las leyes de los Estados Unidos Mexicanos. Para cualquier
+      controversia, las partes se someten a los
+      <strong>tribunales competentes de Monterrey, Nuevo León</strong>, renunciando a cualquier otro
+      fuero que pudiera corresponderles.
+    </p>
+    <p>
+      Esto no te quita el derecho de acudir a la <strong>Procuraduría Federal del Consumidor
+      (PROFECO)</strong>, que siempre es competente para atender quejas de consumidores.
+    </p>
+  </SeccionTexto>
+</PaginaTexto>
