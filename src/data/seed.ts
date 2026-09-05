@@ -16,17 +16,24 @@ export const categorias: Categoria[] = [
 export const sucursales: Sucursal[] = [
   {
     id: 's-centro',
-    nombre: 'Orta Centro',
-    direccion: 'Av. Hidalgo 214, local 3, Centro',
-    horario: 'Lun a sáb 10:00–20:00 · Dom 11:00–16:00',
-    cp: '36000',
+    nombre: 'Orta Lomas Modelo',
+    direccion: 'Av. Zempoala 7908, Col. Lomas Modelo, Monterrey',
+    horario: 'Lun a vie 10:00–18:00 · Sáb 10:00–14:00 · Dom cerrado',
+    cp: '',
   },
   {
     id: 's-plaza',
-    nombre: 'Orta Plaza Norte',
-    direccion: 'Blvd. Norte 1500, isla B-12',
-    horario: 'Lun a dom 11:00–21:00',
-    cp: '36250',
+    nombre: 'Orta Centro',
+    direccion: 'Juan Ignacio Ramón, Plaza Tiktok local 16, Centro, Monterrey',
+    horario: 'Lun a sáb 10:00–18:00 · Dom 10:00–15:00',
+    cp: '',
+  },
+  {
+    id: 's-escobedo',
+    nombre: 'Orta Escobedo',
+    direccion: 'Av. Agualeguas 211 local D, Col. Santa Martha, Cd. Gral. Escobedo',
+    horario: 'Lun a vie 10:00–18:00 · Sáb 10:00–14:00 · Dom cerrado',
+    cp: '66064',
   },
 ];
 
