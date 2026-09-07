@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import CampoClave from './CampoClave';
 import {
   authCliente,
   errorDeEntrada,
@@ -165,28 +166,27 @@ export default function FormularioEntrar({ destino, conVerificacion = true }: Pr
         </div>
 
         {modo !== 'recuperar' && (
-          <div>
-            <label class="campo-etiqueta" for="clave">Contraseña</label>
-            <input
-              id="clave" type="password" class="campo" value={clave} required minLength={8}
-              autocomplete={modo === 'crear' ? 'new-password' : 'current-password'}
-              onInput={(e) => setClave((e.target as HTMLInputElement).value)}
-            />
-            {modo === 'crear' && (
-              <p class="mt-1.5 text-xs text-tinta-500">Mínimo 8 caracteres.</p>
-            )}
-          </div>
+          <CampoClave
+            id="clave"
+            etiqueta="Contraseña"
+            value={clave}
+            onInput={setClave}
+            autocomplete={modo === 'crear' ? 'new-password' : 'current-password'}
+            required
+            minLength={8}
+            ayuda={modo === 'crear' ? 'Mínimo 8 caracteres.' : undefined}
+          />
         )}
 
         {modo === 'crear' && (
-          <div>
-            <label class="campo-etiqueta" for="confirmacion">Repite la contraseña</label>
-            <input
-              id="confirmacion" type="password" class="campo" value={confirmacion} required
-              autocomplete="new-password"
-              onInput={(e) => setConfirmacion((e.target as HTMLInputElement).value)}
-            />
-          </div>
+          <CampoClave
+            id="confirmacion"
+            etiqueta="Repite la contraseña"
+            value={confirmacion}
+            onInput={setConfirmacion}
+            autocomplete="new-password"
+            required
+          />
         )}
 
         {error && (

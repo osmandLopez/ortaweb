@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { authCliente, errorDeClaveNueva, mensajeDeError } from '@/lib/auth-cliente';
+import CampoClave from './CampoClave';
 
 interface Props {
   /** token ya validado por Better Auth al abrir el enlace del correo */
@@ -48,22 +49,25 @@ export default function FormularioRestablecer({ token }: Props) {
     <form onSubmit={enviar} noValidate class="nota-seccion space-y-4">
       <h2 class="rotulo text-lg text-tinta-900">Elige tu contraseña nueva</h2>
 
-      <div>
-        <label class="campo-etiqueta" for="clave">Contraseña nueva</label>
-        <input
-          id="clave" type="password" class="campo" autocomplete="new-password" required minLength={8}
-          value={clave} onInput={(e) => setClave((e.target as HTMLInputElement).value)}
-        />
-        <p class="mt-1.5 text-xs text-tinta-500">Mínimo 8 caracteres.</p>
-      </div>
+      <CampoClave
+        id="clave"
+        etiqueta="Contraseña nueva"
+        value={clave}
+        onInput={setClave}
+        autocomplete="new-password"
+        required
+        minLength={8}
+        ayuda="Mínimo 8 caracteres."
+      />
 
-      <div>
-        <label class="campo-etiqueta" for="confirmacion">Repite la contraseña</label>
-        <input
-          id="confirmacion" type="password" class="campo" autocomplete="new-password" required
-          value={confirmacion} onInput={(e) => setConfirmacion((e.target as HTMLInputElement).value)}
-        />
-      </div>
+      <CampoClave
+        id="confirmacion"
+        etiqueta="Repite la contraseña"
+        value={confirmacion}
+        onInput={setConfirmacion}
+        autocomplete="new-password"
+        required
+      />
 
       {error && (
         <p role="alert" class="rounded-md bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>
