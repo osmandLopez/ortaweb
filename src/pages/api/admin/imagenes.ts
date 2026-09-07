@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ request }) => {
     return json(
       {
         error:
-          'El almacén de imágenes no está configurado. Falta la variable BLOB_READ_WRITE_TOKEN en el proyecto.',
+          'El almacén de imágenes no está disponible. Comprueba que orta-fotos siga conectado al proyecto en Vercel.',
       },
       503,
     );

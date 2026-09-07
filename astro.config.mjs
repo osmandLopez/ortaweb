@@ -6,7 +6,7 @@ import vercel from '@astrojs/vercel';
 // Arquitectura de islas: el catálogo se renderiza en el servidor (SEO + velocidad)
 // y solo el carrito, el checkout y los formularios del panel hidratan JS en el cliente.
 export default defineConfig({
-  site: 'https://ortanovedades.mx',
+  site: 'https://www.ortanovedades.com.mx',
   output: 'server',
   // Vercel sirve funciones serverless, no un proceso de Node: con el adaptador
   // de Node el build genera dist/server/entry.mjs, que la plataforma no sabe
