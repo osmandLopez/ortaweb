@@ -16,6 +16,16 @@ export const prerender = false;
  * producto. La foto queda subida aunque después no se guarde el producto: es
  * preferible una foto huérfana en el almacén a perder la subida por un error de
  * validación en otro campo.
+ *
+ * El archivo llega como cuerpo crudo con su propio content-type, y el nombre en
+ * `?nombre=`. No es multipart a propósito: la protección anti-CSRF de Astro
+ * rechaza los POST de tipo formulario cuyo `origin` no coincida con el que ella
+ * calcula, y en Vercel ese origen no es ninguno de los dominios del sitio, así
+ * que toda subida multipart moría en un 403 antes de llegar hasta aquí.
+ *
+ * Mandarlo como `image/*` esquiva esa regla —solo mira tipos de formulario— y
+ * además es más estricto contra CSRF, no menos: un content-type así obliga al
+ * navegador a un preflight que ningún sitio ajeno va a conseguir.
  */
 
 const json = (data: unknown, status = 200) =>
@@ -32,12 +42,15 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  const formulario = await request.formData().catch(() => null);
-  const archivo = formulario?.get('archivo');
+  const nombre = new URL(request.url).searchParams.get('nombre') ?? 'foto.jpg';
+  const tipo = request.headers.get('content-type') ?? '';
+  const datos = await request.arrayBuffer().catch(() => null);
 
-  if (!(archivo instanceof File) || archivo.size === 0) {
+  if (!datos || datos.byteLength === 0) {
     return json({ error: 'No llegó ninguna foto.' }, 400);
   }
+
+  const archivo = new File([datos], nombre, { type: tipo });
 
   const problema = validarImagen(archivo);
   if (problema) return json({ error: problema }, 422);

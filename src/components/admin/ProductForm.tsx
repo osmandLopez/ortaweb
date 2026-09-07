@@ -112,10 +112,16 @@ export default function ProductForm({ categorias, producto }: Props) {
         continue;
       }
 
-      const cuerpo = new FormData();
-      cuerpo.append('archivo', await reducir(original));
+      /* Va como cuerpo crudo, no como FormData: la protección anti-CSRF de
+         Astro tumba los POST de tipo formulario en producción. Ver el comentario
+         de src/pages/api/admin/imagenes.ts. */
+      const foto = await reducir(original);
 
-      const res = await fetch('/api/admin/imagenes', { method: 'POST', body: cuerpo }).catch(() => null);
+      const res = await fetch(`/api/admin/imagenes?nombre=${encodeURIComponent(foto.name)}`, {
+        method: 'POST',
+        headers: { 'content-type': foto.type },
+        body: foto,
+      }).catch(() => null);
 
       if (!res?.ok) {
         const { error } = (await res?.json().catch(() => null)) ?? {};
