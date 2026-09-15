@@ -2,9 +2,10 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { crearSesionCheckout } from '@/lib/stripe';
-import { cotizar } from '@/lib/shipping';
+import { cpValido } from '@/lib/shipping';
 import { generarFolio } from '@/lib/money';
 import { sitioUrl } from '@/lib/entorno';
+import { correoSolicitud, enviarCorreo } from '@/lib/correo';
 import type { ItemCarrito, Pedido } from '@/lib/types';
 
 export const prerender = false;
@@ -17,7 +18,6 @@ const schema = z.object({
   email: z.string().email('Necesitamos un correo para enviarte la confirmación.'),
   metodoEntrega: z.enum(['envio', 'pickup']),
   cp: z.string().optional(),
-  opcionEnvioId: z.string().optional(),
   sucursalId: z.string().optional(),
 });
 
@@ -56,13 +56,10 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
 
   const subtotal = items.reduce((n, i) => n + i.precio * i.cantidad, 0);
 
-  let envio = null;
   if (datos.metodoEntrega === 'envio') {
-    if (!datos.cp) return json({ error: 'Escribe tu código postal para cotizar el envío.' }, 422);
-    /* La tarifa también se recalcula en el servidor: el navegador manda cuál
-       eligió, no cuánto cuesta. */
-    const { opciones } = cotizar(datos.cp, subtotal);
-    envio = opciones.find((o) => o.id === datos.opcionEnvioId) ?? opciones[0]!;
+    if (!datos.cp || !cpValido(datos.cp)) {
+      return json({ error: 'Escribe tu código postal: son 5 dígitos.' }, 422);
+    }
   } else {
     /* La sucursal se comprueba contra la base. Antes bastaba con que el campo no
        viniera vacío, así que un id inventado creaba un pedido para recoger en
@@ -74,20 +71,69 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     }
   }
 
-  const costoEnvio = envio?.costo ?? 0;
-  const total = subtotal + costoEnvio;
   const usuarioId = locals.usuario?.id ?? null;
+  const folio = generarFolio();
+  const ahora = new Date().toISOString();
+
+  /* --- Envío: solicitud sin cobro ---------------------------------------
+   *
+   * El costo del envío no se sabe todavía. La tienda empaca, lo lleva a la
+   * paquetería, y solo cuando le dan el precio se abre el cobro desde el panel
+   * (ver src/pages/api/admin/pedidos/[id]/cotizar.ts). Así nadie paga una
+   * tarifa inventada ni se entera del envío después de haber pagado.
+   *
+   * El pedido queda guardado igual: es lo que le aparece al dueño por cotizar y
+   * lo que el cliente puede consultar con su folio.
+   */
+  if (datos.metodoEntrega === 'envio') {
+    const pedido: Pedido = {
+      id: crypto.randomUUID(),
+      folio,
+      usuarioId,
+      emailContacto: datos.email,
+      items,
+      subtotal,
+      envio: 0,
+      total: subtotal,
+      pagado: 0,
+      metodoEntrega: 'envio',
+      sucursalId: null,
+      cpEntrega: datos.cp!,
+      direccion: null,
+      estado: 'por_cotizar',
+      stripeSessionId: null,
+      stripePaymentIntentId: null,
+      pagadoEn: null,
+      creadoEn: ahora,
+    };
+    await db.crearPedido(pedido);
+
+    /* Que el correo falle no invalida la solicitud: el pedido ya está guardado
+       y le aparece al dueño en el panel. Se registra y se sigue. */
+    const aviso = await enviarCorreo({
+      para: datos.email,
+      ...correoSolicitud(pedido),
+    });
+    if (!aviso.ok) {
+      console.error(`[orta] Solicitud ${folio} sin correo de aviso: ${aviso.detalle}`);
+    }
+
+    return json({ solicitud: true, folio, subtotal });
+  }
+
+  /* --- Recoger en tienda: cobro inmediato ------------------------------- */
+
+  const total = subtotal;
 
   /* Si Stripe no responde (o falta la clave), el cliente tiene que enterarse con
      una frase entendible en vez de un 500 con cuerpo vacío. El detalle queda en
      el log del servidor, que es donde sirve. */
   let sesion;
-  const folio = generarFolio();
   try {
     sesion = await crearSesionCheckout({
       items,
-      envio,
-      metodoEntrega: datos.metodoEntrega,
+      envio: null,
+      metodoEntrega: 'pickup',
       sucursalId: datos.sucursalId ?? null,
       email: datos.email,
       folio,
@@ -128,17 +174,18 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     emailContacto: datos.email,
     items,
     subtotal,
-    envio: costoEnvio,
+    envio: 0,
     total,
     pagado: 0,
-    metodoEntrega: datos.metodoEntrega,
-    sucursalId: datos.sucursalId ?? null,
+    metodoEntrega: 'pickup',
+    sucursalId: datos.sucursalId!,
+    cpEntrega: null,
     direccion: null,
     estado: 'pendiente_pago',
     stripeSessionId: sesion.id,
     stripePaymentIntentId: null,
     pagadoEn: null,
-    creadoEn: new Date().toISOString(),
+    creadoEn: ahora,
   };
   await db.crearPedido(pedido);
 

@@ -157,6 +157,30 @@ export const memoria: Repositorio = {
     return pedido;
   },
 
+  async obtenerPedidoPorId(pid) {
+    return pedidos.find((x) => x.id === pid) ?? null;
+  },
+
+  async cotizarEnvio({ pedidoId, envio, sessionId }) {
+    const p = pedidos.find((x) => x.id === pedidoId);
+    // Solo se cotiza una vez: un pedido ya cobrado no se reabre.
+    if (!p || p.estado !== 'por_cotizar') return null;
+
+    p.envio = envio;
+    p.total = p.subtotal + envio;
+    p.stripeSessionId = sessionId;
+    p.estado = 'pendiente_pago';
+    return p;
+  },
+
+  async cancelarPedido(pid) {
+    const p = pedidos.find((x) => x.id === pid);
+    /* Un pedido cobrado no se cancela desde aquí: eso es un reembolso. */
+    if (!p || (p.estado !== 'por_cotizar' && p.estado !== 'pendiente_pago')) return null;
+    p.estado = 'cancelado';
+    return p;
+  },
+
   async obtenerPedidoPorSesion(sessionId) {
     return pedidos.find((p) => p.stripeSessionId === sessionId) ?? null;
   },

@@ -10,7 +10,6 @@ import {
   totalItems,
 } from '@/stores/cart';
 import { precio } from '@/lib/money';
-import { UMBRAL_ENVIO_GRATIS } from '@/lib/shipping';
 import { useHidratado } from '@/stores/hidratacion';
 
 export default function CartDrawer() {
@@ -38,8 +37,6 @@ export default function CartDrawer() {
     };
   }, [abierto]);
 
-  const falta = Math.max(0, UMBRAL_ENVIO_GRATIS - mercancia);
-  const avance = Math.min(100, (mercancia / UMBRAL_ENVIO_GRATIS) * 100);
 
   return (
     <div
@@ -75,12 +72,10 @@ export default function CartDrawer() {
 
         {items.length > 0 && (
           <div class="border-b border-tinta-200 px-5 py-3">
-            <p class="font-nota text-[11px] text-tinta-600">
-              {falta > 0 ? <>Te faltan <strong class="text-tinta-900">{precio(falta)}</strong> para envío gratis</> : 'Envío estándar gratis aplicado'}
+            <p class="font-nota text-[11px] leading-relaxed text-tinta-600">
+              Recoge en tienda <strong class="text-tinta-900">sin costo</strong>, o pide envío y te
+              pasamos el precio antes de cobrarte.
             </p>
-            <div class="mt-2 h-1 w-full rounded-full bg-tinta-100">
-              <div class="h-1 rounded-full bg-cielo-500 transition-[width] duration-500" style={{ width: `${avance}%` }} />
-            </div>
           </div>
         )}
 

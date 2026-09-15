@@ -174,9 +174,12 @@ export const pedidos = sqliteTable(
     metodoEntrega: text('metodo_entrega', { enum: ['envio', 'pickup'] }).notNull(),
     sucursalId: text('sucursal_id').references(() => sucursales.id),
     direccionId: text('direccion_id').references(() => direcciones.id),
+    /* Destino del envío, para poder cotizar antes de abrir el cobro. La
+       dirección completa llega después, de Stripe. Null si se recoge en tienda. */
+    cpEntrega: text('cp_entrega'),
     estado: text('estado', {
       enum: [
-        'pendiente_pago', 'pagado',
+        'por_cotizar', 'pendiente_pago', 'pagado',
         'en_preparacion', 'enviado', 'listo_para_recoger', 'entregado', 'cancelado',
       ],
     }).notNull().default('pendiente_pago'),

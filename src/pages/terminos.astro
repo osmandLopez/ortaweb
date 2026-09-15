@@ -1,27 +1,22 @@
 ---
 import PaginaTexto from '@/components/layout/PaginaTexto.astro';
 import SeccionTexto from '@/components/layout/SeccionTexto.astro';
-import { UMBRAL_ENVIO_GRATIS } from '@/lib/shipping';
 
 /*
  * Términos y condiciones de venta. Contestados por el dueño el 3 de septiembre
  * de 2026.
  *
- * El umbral de envío gratis se lee de shipping.ts a propósito: es el mismo
- * número que cobra el checkout, y si alguien lo cambia allá esta página no puede
- * quedarse mintiendo.
+ * La sección de envíos se reescribió el 15 de septiembre: la tienda no cobra una
+ * tarifa fija, cotiza con la paquetería después de empacar. Eso es una condición
+ * de venta, no un detalle de operación, así que tiene que estar aquí escrita con
+ * claridad —incluido el derecho a no aceptar la cotización y que se cancele sin
+ * cobro—, que es justo lo que PROFECO revisaría.
  */
 const RESPONSABLE = 'José de Jesús Guadalupe Orta Álvarez';
 const DOMICILIO = 'Av. Zempoala 7908, Col. Lomas Modelo, Monterrey, Nuevo León, México';
 const CORREO = 'comercializadora.orta@gmail.com';
 const WHATSAPP_VISIBLE = '81 2563 7098';
 const WHATSAPP = 'https://wa.me/528125637098';
-
-const envioGratis = (UMBRAL_ENVIO_GRATIS / 100).toLocaleString('es-MX', {
-  style: 'currency',
-  currency: 'MXN',
-  maximumFractionDigits: 0,
-});
 
 const secciones = [
   { id: 'quien-vende', titulo: 'Quién te vende' },
@@ -47,7 +42,7 @@ const secciones = [
   titulo="Términos y condiciones"
   entradilla="Las reglas de la venta: precios, pagos, cancelaciones y qué pasa el día que algo sale mal. Al comprar en este sitio las estás aceptando."
   descripcion="Términos y condiciones de venta de Orta Novedades: precios, pagos, cancelaciones, faltantes de existencia, envíos y jurisdicción aplicable."
-  actualizado="3 de septiembre de 2026"
+  actualizado="15 de septiembre de 2026"
   secciones={secciones}
 >
   <SeccionTexto id="quien-vende" titulo="Quién te vende">
@@ -65,8 +60,9 @@ const secciones = [
   <SeccionTexto id="precios" titulo="Precios e IVA">
     <p>
       Todos los precios están en <strong>pesos mexicanos</strong> y <strong>ya llevan el IVA
-      incluido</strong>. Lo que ves en la etiqueta del producto es lo que se cobra; al final se suma
-      el envío, que se calcula con tu código postal antes de pagar.
+      incluido</strong>. Lo que ves en la etiqueta del producto es lo que se cobra. Si pides envío,
+      su costo se suma aparte y te lo pasamos antes de cobrarte: mira la sección de
+      <a href="#envios">envíos y entregas</a>.
     </p>
     <p>
       Los precios pueden cambiar en cualquier momento. El que vale para tu compra es el que aparecía
@@ -156,19 +152,35 @@ const secciones = [
 
   <SeccionTexto id="envios" titulo="Envíos y entregas">
     <p>
-      Enviamos a todo México con <strong>Estafeta, FedEx y Teammex</strong>, y dentro del área
-      metropolitana de Monterrey también con <strong>La Mensajería MX</strong>. El costo se calcula
-      con tu código postal antes de pagar, y a partir de {envioGratis} de compra el
-      <strong>envío estándar va sin costo</strong>.
+      <strong>El costo del envío no se cobra al momento de pedir.</strong> La paquetería lo calcula
+      según el peso y las dimensiones del paquete, y eso se sabe cuando ya está empacado. Así que el
+      pedido funciona en dos pasos:
+    </p>
+    <ul class="ml-5 list-decimal space-y-2 marker:font-nota marker:text-tinta-400">
+      <li>
+        Haces tu pedido con tu código postal. <strong>Aquí no se te cobra nada</strong>, y recibes un
+        correo con tu folio y el importe de la mercancía.
+      </li>
+      <li>
+        Empacamos, lo llevamos a la paquetería y nos dan el precio. Te mandamos el total —mercancía
+        más envío— con un enlace para pagar.
+      </li>
+      <li>Pagas, y el paquete sale. La dirección de entrega se captura al pagar.</li>
+    </ul>
+    <p>
+      <strong>Si el costo del envío no te parece, no pagas y el pedido se cancela.</strong> No te
+      cobramos nada por eso y no tienes que dar explicaciones: hasta que no pagas, no hay venta. Tu
+      pedido tampoco caduca al instante: si tardas en decidir, escríbenos y lo retomamos.
     </p>
     <p>
-      Los tiempos que ves al elegir el envío son <strong>estimados de la paquetería</strong>, no una
-      fecha garantizada: un retraso de la paquetería, un domicilio incompleto o que no haya quien
-      reciba pueden moverla.
+      Enviamos a todo México con <strong>Estafeta, FedEx y Tmex</strong>, y dentro del área
+      metropolitana de Monterrey también con <strong>La Mensajería MX</strong>. Los tiempos que te
+      digamos son <strong>estimados de la paquetería</strong>, no una fecha garantizada: un retraso
+      suyo, un domicilio incompleto o que no haya quien reciba pueden moverla.
     </p>
     <p>
-      También puedes elegir <strong>recoger en tienda</strong> sin pagar envío. Te avisamos cuando tu
-      pedido esté listo.
+      <strong>Recoger en tienda no tiene ninguno de estos pasos ni costo alguno</strong>: eliges la
+      sucursal, pagas en el momento, y te avisamos cuando esté listo.
     </p>
   </SeccionTexto>
 

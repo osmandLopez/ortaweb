@@ -70,6 +70,12 @@ export interface OpcionEnvio {
 }
 
 export type EstadoPedido =
+  /**
+   * Pedido de envío recibido y todavía sin precio de envío. No hay cobro
+   * abierto: la tienda lleva los paquetes a la paquetería, y solo cuando sabe
+   * cuánto cuesta genera el pago. Ver src/pages/api/admin/pedidos/[id]/cotizar.ts
+   */
+  | 'por_cotizar'
   | 'pendiente_pago'
   | 'pagado'
   | 'en_preparacion'
@@ -93,6 +99,14 @@ export interface Pedido {
   metodoEntrega: MetodoEntrega;
   sucursalId: string | null;
   direccion: Direccion | null;
+  /**
+   * Código postal de destino, capturado al solicitar el pedido.
+   *
+   * La dirección completa la sigue recogiendo Stripe al pagar, pero el pago se
+   * abre después de cotizar, y para cotizar con la paquetería hace falta saber
+   * a dónde va. De ahí este campo: null en los pedidos para recoger en tienda.
+   */
+  cpEntrega: string | null;
   estado: EstadoPedido;
   stripeSessionId: string | null;
   stripePaymentIntentId: string | null;

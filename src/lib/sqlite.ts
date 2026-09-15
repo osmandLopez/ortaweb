@@ -222,6 +222,7 @@ export const sqlite: Repositorio = {
         pagado: pedido.pagado,
         metodoEntrega: pedido.metodoEntrega,
         sucursalId: pedido.sucursalId,
+        cpEntrega: pedido.cpEntrega,
         direccionId: null,
         estado: pedido.estado,
         stripeSessionId: pedido.stripeSessionId,
@@ -246,9 +247,58 @@ export const sqlite: Repositorio = {
     return pedido;
   },
 
+  async obtenerPedidoPorId(id) {
+    const [f] = await orm.select().from(t.pedidos).where(eq(t.pedidos.id, id)).limit(1);
+    return f ? armarPedido(f) : null;
+  },
+
   async obtenerPedidoPorSesion(sessionId) {
     const [f] = await orm.select().from(t.pedidos).where(eq(t.pedidos.stripeSessionId, sessionId)).limit(1);
     return f ? armarPedido(f) : null;
+  },
+
+  async cotizarEnvio({ pedidoId, envio, sessionId }) {
+    const [f] = await orm.select().from(t.pedidos).where(eq(t.pedidos.id, pedidoId)).limit(1);
+    if (!f) return null;
+
+    const total = f.subtotal + envio;
+
+    /* El estado va en el WHERE, no en un if previo: es lo que hace que dos
+       pestañas del panel cotizando a la vez no abran dos cobros del mismo
+       pedido. La segunda no encuentra fila que actualizar y se va con null. */
+    const r = await orm
+      .update(t.pedidos)
+      .set({ envio, total, stripeSessionId: sessionId, estado: 'pendiente_pago' })
+      .where(and(eq(t.pedidos.id, pedidoId), eq(t.pedidos.estado, 'por_cotizar')));
+    if (r.rowsAffected === 0) return null;
+
+    return armarPedido({
+      ...f,
+      envio,
+      total,
+      stripeSessionId: sessionId,
+      estado: 'pendiente_pago' as const,
+    });
+  },
+
+  async cancelarPedido(id) {
+    const [f] = await orm.select().from(t.pedidos).where(eq(t.pedidos.id, id)).limit(1);
+    if (!f) return null;
+
+    /* Un pedido cobrado no se cancela desde aquí: eso es un reembolso, y se
+       hace en Stripe para que el dinero vuelva de verdad. */
+    const r = await orm
+      .update(t.pedidos)
+      .set({ estado: 'cancelado' })
+      .where(
+        and(
+          eq(t.pedidos.id, id),
+          inArray(t.pedidos.estado, ['por_cotizar', 'pendiente_pago']),
+        ),
+      );
+    if (r.rowsAffected === 0) return null;
+
+    return armarPedido({ ...f, estado: 'cancelado' as const });
   },
 
   async listarPedidos(limite = 50) {
@@ -407,6 +457,7 @@ async function armarPedido(f: FilaPedido, ejecutor: Ejecutor = orm): Promise<Ped
     pagado: f.pagado,
     metodoEntrega: f.metodoEntrega,
     sucursalId: f.sucursalId,
+    cpEntrega: f.cpEntrega,
     direccion: dir
       ? {
           id: dir.id,

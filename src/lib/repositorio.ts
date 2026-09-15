@@ -19,9 +19,29 @@ export interface Repositorio {
   listarSucursales(): Promise<Sucursal[]>;
 
   crearPedido(pedido: Pedido): Promise<Pedido>;
+  obtenerPedidoPorId(id: string): Promise<Pedido | null>;
   obtenerPedidoPorSesion(sessionId: string): Promise<Pedido | null>;
   listarPedidos(limite?: number): Promise<Pedido[]>;
   listarPedidosDeUsuario(usuarioId: string): Promise<Pedido[]>;
+
+  /**
+   * Fija el precio del envío de un pedido `por_cotizar` y le engancha el cobro
+   * recién abierto, dejándolo en `pendiente_pago`.
+   *
+   * Solo toca pedidos en `por_cotizar`: así dos pestañas del panel cotizando el
+   * mismo pedido no abren dos cobros, y uno ya pagado no se puede reabrir.
+   * Devuelve el pedido actualizado, o null si ya no estaba por cotizar.
+   */
+  cotizarEnvio(datos: CotizacionEnvio): Promise<Pedido | null>;
+
+  /**
+   * Cancela un pedido por su id, desde el panel.
+   *
+   * Es la salida para cuando el cliente no acepta el costo del envío. Solo toca
+   * pedidos sin cobrar —`por_cotizar` o `pendiente_pago`—; uno pagado se
+   * reembolsa desde Stripe, no se cancela aquí.
+   */
+  cancelarPedido(id: string): Promise<Pedido | null>;
 
   /** Asigna el rol. Se usa desde el script de mantenimiento, no desde la web. */
   asignarRol(email: string, rol: 'admin' | 'cliente'): Promise<boolean>;
@@ -71,6 +91,14 @@ export interface ConfirmacionPago {
   paymentIntentId?: string | null;
   /** Dirección capturada en el checkout. null en pedidos para recoger en tienda. */
   direccion?: Direccion | null;
+}
+
+export interface CotizacionEnvio {
+  pedidoId: string;
+  /** Centavos que cobra la paquetería, tal como los capturó el panel. */
+  envio: number;
+  /** La sesión de Checkout recién abierta con mercancía + envío. */
+  sessionId: string;
 }
 
 export interface FiltroProductos {

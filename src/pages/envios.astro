@@ -1,0 +1,156 @@
+---
+import PaginaTexto from '@/components/layout/PaginaTexto.astro';
+import SeccionTexto from '@/components/layout/SeccionTexto.astro';
+import { db } from '@/lib/db';
+
+/*
+ * Envíos y entregas.
+ *
+ * La página llevaba desde el primer commit enlazada en el pie y dando 404: no se
+ * podía escribir porque no había tarifas que publicar. Ahora sí hay algo que
+ * contar, y no es una tabla de precios: es que el envío se cotiza después de
+ * empacar. Esa es la parte que hay que explicar bien, porque es lo que rompe la
+ * expectativa de quien está acostumbrado a ver el total antes de pagar.
+ */
+const sucursales = await db.listarSucursales();
+
+const WHATSAPP_VISIBLE = '81 2563 7098';
+const WHATSAPP = 'https://wa.me/528125637098';
+
+const secciones = [
+  { id: 'como-funciona', titulo: 'Cómo funciona' },
+  { id: 'por-que', titulo: 'Por qué no sale el precio de una' },
+  { id: 'no-acepto', titulo: 'Si el envío me parece caro' },
+  { id: 'paqueterias', titulo: 'Con quién enviamos' },
+  { id: 'tiempos', titulo: 'Cuánto tarda' },
+  { id: 'recoger', titulo: 'Recoger en tienda' },
+];
+
+const pasos = [
+  {
+    titulo: 'Haces tu pedido',
+    texto: 'Eliges lo que quieres y escribes tu código postal. No se te cobra nada y te llega un correo con tu folio.',
+  },
+  {
+    titulo: 'Pesamos tu paquete',
+    texto: 'Lo empacamos y lo llevamos a la paquetería, que nos da el precio exacto para tu domicilio.',
+  },
+  {
+    titulo: 'Te pasamos el total',
+    texto: 'Recibes un correo con la mercancía, el envío y el total, más un enlace para pagar.',
+  },
+  {
+    titulo: 'Pagas y sale',
+    texto: 'Al pagar nos das la dirección de entrega. De ahí el paquete se va con la paquetería.',
+  },
+];
+---
+
+<PaginaTexto
+  etiqueta="Ayuda"
+  titulo="Envíos y entregas"
+  entradilla="Enviamos a todo México, y el costo lo sabes antes de pagar. Aquí está cómo funciona, por qué no aparece de una, y qué pasa si no te late."
+  descripcion="Cómo funcionan los envíos de Orta Novedades: el costo se cotiza con la paquetería y se te pasa antes de cobrarte. Paqueterías, tiempos y recoger en tienda."
+  actualizado="15 de septiembre de 2026"
+  secciones={secciones}
+>
+  <ol class="grid gap-4 sm:grid-cols-2">
+    {pasos.map((p, i) => (
+      <li class="rounded-2xl border border-tinta-200 bg-white p-5 shadow-sm">
+        <span class="font-nota text-xs tabular-nums text-cielo-600">0{i + 1}</span>
+        <p class="rotulo mt-2 text-lg text-tinta-900">{p.titulo}</p>
+        <p class="mt-2 text-sm leading-relaxed text-tinta-600">{p.texto}</p>
+      </li>
+    ))}
+  </ol>
+
+  <SeccionTexto id="como-funciona" titulo="Cómo funciona">
+    <p>
+      El pedido va en dos tiempos: <strong>primero lo apartas, después pagas</strong>.
+    </p>
+    <p>
+      Cuando terminas en la tienda, tu pedido queda registrado y te llega un correo con el folio y el
+      importe de la mercancía. <strong>Ahí todavía no se te cobra nada</strong> — no te pedimos la
+      tarjeta y no hay ningún cargo pendiente.
+    </p>
+    <p>
+      Nosotros empacamos, lo llevamos a la paquetería, y con el precio en la mano te mandamos el
+      total con un enlace para pagar. Al pagar nos das la dirección de entrega, y el paquete sale.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="por-que" titulo="Por qué no sale el precio de una">
+    <p>
+      Porque no lo ponemos nosotros. La paquetería cobra según <strong>lo que pesa el paquete y lo
+      que mide</strong>, y las dos cosas dependen de qué llevas y de cómo acaba armada la caja.
+    </p>
+    <p>
+      Un llavero y una pijama valen parecido y cuestan muy distinto de mandar. Y el tamaño pesa tanto
+      como el peso: una toalla no pesa casi nada, pero ocupa una caja grande, y la paquetería cobra
+      por eso.
+    </p>
+    <p>
+      Podríamos poner una tarifa fija y quedarnos tranquilos, pero entonces unos pagarían de más para
+      cubrir a otros. Preferimos decirte el número real.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="no-acepto" titulo="Si el envío me parece caro">
+    <p>
+      <strong>No pagas y no pasa nada.</strong> Ignora el correo, o dinos que no lo quieres, y
+      cancelamos el pedido. No hay cargo, ni penalización, ni nada que devolver, porque nunca se te
+      cobró.
+    </p>
+    <p>
+      Y si quieres, dinos: a veces se puede acomodar de otra forma —quitar una pieza, cambiar de
+      paquetería, o que lo recojas en la tienda. Escríbenos por WhatsApp al
+      <a href={WHATSAPP} target="_blank" rel="noopener noreferrer">{WHATSAPP_VISIBLE}</a> con tu
+      folio.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="paqueterias" titulo="Con quién enviamos">
+    <p>A todo México con <strong>Estafeta, FedEx y Tmex</strong>.</p>
+    <p>
+      Dentro del área metropolitana de Monterrey también con <strong>La Mensajería MX</strong>, que
+      suele salir más barato y más rápido.
+    </p>
+    <p>
+      Cuál te toca depende de a dónde va tu paquete y de cuál nos dé mejor precio ese día. Te lo
+      decimos en el correo del total.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="tiempos" titulo="Cuánto tarda">
+    <p>
+      El paquete sale <strong>en cuanto se registra tu pago</strong>. Lo que tarde después ya es de la
+      paquetería, y te damos su estimado junto con la guía de rastreo.
+    </p>
+    <p>
+      Esos tiempos son estimados, no una fecha garantizada. Un retraso de la paquetería, un domicilio
+      incompleto o que no haya quien reciba pueden moverla.
+    </p>
+    <p>
+      Si tu paquete se pasa de lo estimado, escríbenos con tu folio y lo rastreamos contigo.
+    </p>
+  </SeccionTexto>
+
+  <SeccionTexto id="recoger" titulo="Recoger en tienda">
+    <p>
+      Es la opción sin espera y <strong>sin costo de envío</strong>. Eliges la sucursal, pagas en ese
+      momento en el sitio, y te avisamos cuando esté listo.
+    </p>
+    <p>Tenemos tres:</p>
+    <ul class="ml-5 list-disc space-y-2 marker:text-tinta-400">
+      {sucursales.map((s) => (
+        <li>
+          <strong>{s.nombre}</strong> · {s.direccion}
+          <span class="mt-0.5 block font-nota text-xs text-tinta-500">{s.horario}</span>
+        </li>
+      ))}
+    </ul>
+    <p>
+      Las direcciones y los horarios completos están en <a href="/contacto">Contacto</a>.
+    </p>
+  </SeccionTexto>
+</PaginaTexto>

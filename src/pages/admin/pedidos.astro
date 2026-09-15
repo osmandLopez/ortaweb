@@ -3,6 +3,7 @@ import AdminLayout from '@/layouts/AdminLayout.astro';
 import { db } from '@/lib/db';
 import { precio } from '@/lib/money';
 import { enModoPrueba } from '@/lib/stripe';
+import CotizarEnvio from '@/components/admin/CotizarEnvio';
 
 /*
  * Lista de pedidos del panel.
@@ -22,6 +23,7 @@ const panelStripe = enModoPrueba()
   : 'https://dashboard.stripe.com/payments/';
 
 const ETIQUETA_ESTADO: Record<string, string> = {
+  por_cotizar: 'Por cotizar',
   pendiente_pago: 'Pendiente de pago',
   pagado: 'Pagado',
   en_preparacion: 'En preparación',
@@ -32,6 +34,7 @@ const ETIQUETA_ESTADO: Record<string, string> = {
 };
 
 const COLOR_ESTADO: Record<string, string> = {
+  por_cotizar: 'bg-mistico-100 text-mistico-800',
   pendiente_pago: 'bg-oro-100 text-oro-800',
   pagado: 'bg-cielo-100 text-cielo-800',
   en_preparacion: 'bg-cielo-100 text-cielo-800',
@@ -50,6 +53,7 @@ const fecha = (iso: string) =>
     minute: '2-digit',
   });
 
+const porCotizar = pedidos.filter((p) => p.estado === 'por_cotizar').length;
 const porCobrar = pedidos.filter((p) => p.estado === 'pendiente_pago').length;
 const cobrado = pedidos.reduce((n, p) => n + p.pagado, 0);
 ---
@@ -61,6 +65,12 @@ const cobrado = pedidos.reduce((n, p) => n + p.pagado, 0);
       <p class="mt-2 text-sm text-tinta-600">
         {pedidos.length} en total · {precio(cobrado)} cobrado · {porCobrar} sin confirmar
       </p>
+      {porCotizar > 0 && (
+        <p class="mt-2 inline-flex items-center gap-2 rounded-md bg-mistico-100 px-3 py-1.5 text-sm font-bold text-mistico-800">
+          <span class="h-1.5 w-1.5 rounded-full bg-mistico-500" aria-hidden="true"></span>
+          {porCotizar} {porCotizar === 1 ? 'pedido espera' : 'pedidos esperan'} el costo del envío
+        </p>
+      )}
     </div>
     <p class="font-nota text-[11px] text-tinta-400">
       {enModoPrueba() ? 'Stripe en modo Prueba' : 'Stripe en modo Producción'}
@@ -157,13 +167,29 @@ const cobrado = pedidos.reduce((n, p) => n + p.pagado, 0);
                   </p>
                 ) : (
                   <p class="mt-2 text-sm text-tinta-500">
-                    {p.estado === 'pendiente_pago'
-                      ? 'Stripe la captura al pagar.'
+                    {p.cpEntrega && <>CP {p.cpEntrega}. </>}
+                    {p.estado === 'por_cotizar' || p.estado === 'pendiente_pago'
+                      ? 'La dirección completa la captura Stripe al pagar.'
                       : 'Sin dirección registrada. Consúltala en el cobro de Stripe.'}
                   </p>
                 )}
               </div>
             </div>
+
+            {/* Lo que hay que hacer con este pedido. Solo aparece mientras
+                espera precio de envío: en cuanto se cotiza, el pedido sigue el
+                mismo camino que cualquier otro. */}
+            {p.estado === 'por_cotizar' && (
+              <div class="mt-4 border-t border-dashed border-tinta-300 pt-4">
+                <CotizarEnvio
+                  client:load
+                  pedidoId={p.id}
+                  folio={p.folio}
+                  subtotal={p.subtotal}
+                  cpEntrega={p.cpEntrega}
+                />
+              </div>
+            )}
           </li>
         );
       })}

@@ -1,10 +1,10 @@
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
-import { carrito, subtotal } from '@/stores/cart';
+import { carrito, subtotal, vaciar } from '@/stores/cart';
 import { precio } from '@/lib/money';
 import { correoValido } from '@/lib/auth-cliente';
 import { useHidratado } from '@/stores/hidratacion';
-import type { MetodoEntrega, OpcionEnvio, Sucursal } from '@/lib/types';
+import type { MetodoEntrega, Sucursal } from '@/lib/types';
 
 interface Props {
   sucursales: Sucursal[];
@@ -22,16 +22,16 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
   const [email, setEmail] = useState(emailPrevio);
   const [metodo, setMetodo] = useState<MetodoEntrega>('envio');
   const [cp, setCp] = useState('');
-  const [opciones, setOpciones] = useState<OpcionEnvio[]>([]);
-  const [opcionId, setOpcionId] = useState('');
   const [sucursalId, setSucursalId] = useState(sucursales[0]?.id ?? '');
-  const [cotizando, setCotizando] = useState(false);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  /* Folio de la solicitud de envío ya registrada. Mientras valga algo, la isla
+     enseña el acuse en vez del formulario: el pedido existe y volver a mandarlo
+     crearía un duplicado. */
+  const [solicitado, setSolicitado] = useState('');
 
-  const opcion = opciones.find((o) => o.id === opcionId) ?? null;
-  const costoEnvio = metodo === 'envio' ? opcion?.costo ?? 0 : 0;
-  const total = mercancia + costoEnvio;
+  /* Con envío no hay total todavía: el envío lo pone la paquetería después. */
+  const total = mercancia;
 
   /* Volver con el botón "atrás" desde Stripe no siempre recarga la página: el
      navegador suele tenerla guardada entera —el bfcache— con el estado de
@@ -48,33 +48,6 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
     return () => window.removeEventListener('pageshow', alRestaurar);
   }, []);
 
-  const cotizar = async () => {
-    setError('');
-    if (!/^\d{5}$/.test(cp)) return setError('El código postal son 5 dígitos.');
-    setCotizando(true);
-
-    /* El try/finally no es adorno: si se cae la red, `fetch` no devuelve un
-       error, lanza. Sin esto el "Cotizando…" se quedaba puesto y el botón
-       muerto hasta recargar la página. */
-    try {
-      const res = await fetch('/api/shipping/quote', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ cp, subtotal: mercancia }),
-      });
-      const cuerpo = await res.json().catch(() => null);
-
-      if (!res.ok) return setError(cuerpo?.error ?? 'No pudimos cotizar el envío. Inténtalo de nuevo.');
-
-      setOpciones(cuerpo.opciones);
-      setOpcionId(cuerpo.opciones[0]?.id ?? '');
-    } catch {
-      setError('No pudimos cotizar el envío. Revisa tu conexión e inténtalo de nuevo.');
-    } finally {
-      setCotizando(false);
-    }
-  };
-
   const pagar = async (e: Event) => {
     e.preventDefault();
     // Segundo cerrojo contra el doble clic: el botón ya está deshabilitado
@@ -83,7 +56,9 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
 
     setError('');
     if (!correoValido(email)) return setError('Escribe un correo válido: ahí te llega la confirmación.');
-    if (metodo === 'envio' && !opcion) return setError('Cotiza el envío con tu código postal.');
+    if (metodo === 'envio' && !/^\d{5}$/.test(cp)) {
+      return setError('Escribe tu código postal: son 5 dígitos. Lo necesitamos para cotizar el envío.');
+    }
     if (metodo === 'pickup' && !sucursalId) return setError('Elige la sucursal donde vas a recoger.');
 
     setEnviando(true);
@@ -96,7 +71,6 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
           email,
           metodoEntrega: metodo,
           cp: metodo === 'envio' ? cp : undefined,
-          opcionEnvioId: opcionId || undefined,
           sucursalId: metodo === 'pickup' ? sucursalId : undefined,
         }),
       });
@@ -104,9 +78,23 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
       // El cuerpo puede no ser JSON si algo revienta antes de llegar al endpoint.
       const cuerpo = await res.json().catch(() => null);
 
-      if (!res.ok || !cuerpo?.url) {
+      if (!res.ok) {
         setEnviando(false);
-        return setError(cuerpo?.error ?? 'No se pudo iniciar el pago. Inténtalo de nuevo.');
+        return setError(cuerpo?.error ?? 'No se pudo registrar tu pedido. Inténtalo de nuevo.');
+      }
+
+      /* Envío: no hay a dónde ir. El pedido quedó guardado esperando precio de
+         envío, así que se vacía el carrito —ya está en el pedido, dejarlo
+         invitaría a pedirlo dos veces— y se enseña el acuse con el folio. */
+      if (cuerpo?.solicitud) {
+        vaciar();
+        setSolicitado(cuerpo.folio);
+        return;
+      }
+
+      if (!cuerpo?.url) {
+        setEnviando(false);
+        return setError('No se pudo iniciar el pago. Inténtalo de nuevo.');
       }
 
       /* Stripe Checkout aloja el formulario de tarjeta: ningún dato de pago toca
@@ -121,6 +109,37 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
       setError('No pudimos conectar con el pago. Revisa tu conexión e inténtalo de nuevo.');
     }
   };
+
+  /* Acuse de la solicitud. Va antes de la comprobación del carrito vacío a
+     propósito: al registrar el pedido se vacía el carrito, y sin este orden el
+     cliente vería "tu carrito está vacío" justo después de pedir. */
+  if (solicitado) {
+    return (
+      <div class="nota-seccion mx-auto max-w-xl text-center">
+        <p class="etiqueta text-cielo-600">Pedido registrado</p>
+        <p class="rotulo mt-3 text-2xl text-tinta-900">Ya lo tenemos apartado</p>
+
+        <p class="mt-4 font-nota text-sm text-tinta-500">
+          Folio <strong class="text-tinta-900">{solicitado}</strong>
+        </p>
+
+        <p class="mt-5 text-sm leading-relaxed text-tinta-600">
+          Te mandamos un correo a <strong class="text-tinta-900">{email}</strong> con el detalle.
+          En cuanto pesemos tu paquete y sepamos el costo del envío, te llega el total con el
+          enlace para pagar.
+        </p>
+        <p class="mt-3 text-sm leading-relaxed text-tinta-600">
+          <strong class="text-tinta-900">Todavía no se te ha cobrado nada.</strong> Si el envío te
+          parece caro, no pagas y cancelamos el pedido.
+        </p>
+
+        <div class="mt-7 flex flex-wrap justify-center gap-3">
+          <a href="/tienda" class="btn-primario">Seguir viendo la tienda</a>
+          <a href="/contacto" class="btn-linea">Dudas sobre mi pedido</a>
+        </div>
+      </div>
+    );
+  }
 
   /* El servidor no conoce el carrito, así que este bloque es también lo que se
      envía en el HTML. Mientras la isla monta dice "leyendo", no "vacío": el
@@ -160,8 +179,8 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
 
           <div class="mt-4 grid gap-3 sm:grid-cols-2">
             {([
-              ['envio', 'Envío a domicilio', 'Cotizamos con tu código postal'],
-              ['pickup', 'Recoger en tienda', 'Sin costo, listo el mismo día'],
+              ['envio', 'Envío a domicilio', 'Te pasamos el costo antes de cobrarte'],
+              ['pickup', 'Recoger en tienda', 'Sin costo de envío, pagas ahora'],
             ] as const).map(([valor, titulo, ayuda]) => (
               <label key={valor}
                 class={`cursor-pointer rounded-md border p-4 transition ${metodo === valor ? 'border-cielo-500 bg-cielo-50' : 'border-tinta-200 hover:border-tinta-400'}`}>
@@ -176,36 +195,19 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
           {metodo === 'envio' ? (
             <div class="mt-5">
               <label class="campo-etiqueta" for="cp">Código postal</label>
-              <div class="flex gap-2">
-                <input id="cp" class="campo font-nota tabular-nums" inputMode="numeric" maxLength={5}
-                  value={cp} placeholder="36000"
-                  onInput={(e) => setCp((e.target as HTMLInputElement).value.replace(/\D/g, ''))} />
-                <button type="button" class="btn-linea shrink-0" onClick={cotizar} disabled={cotizando}>
-                  {cotizando ? 'Cotizando…' : 'Cotizar'}
-                </button>
-              </div>
+              <input id="cp" class="campo font-nota tabular-nums sm:max-w-[10rem]" inputMode="numeric" maxLength={5}
+                value={cp} placeholder="64150"
+                onInput={(e) => setCp((e.target as HTMLInputElement).value.replace(/\D/g, ''))} />
 
-              {opciones.length > 0 && (
-                <ul class="mt-4 space-y-2">
-                  {opciones.map((o) => (
-                    <li key={o.id}>
-                      <label class={`flex cursor-pointer items-center justify-between gap-3 rounded-md border p-3.5 transition ${opcionId === o.id ? 'border-cielo-500 bg-cielo-50' : 'border-tinta-200 hover:border-tinta-400'}`}>
-                        <span>
-                          <input type="radio" name="opcionEnvio" class="sr-only" checked={opcionId === o.id}
-                            onChange={() => { setError(''); setOpcionId(o.id); }} />
-                          <span class="block text-sm font-bold text-tinta-900">{o.nombre}</span>
-                          <span class="block text-xs text-tinta-500">
-                            {o.descripcion} · {o.diasHabiles[0]}–{o.diasHabiles[1]} días hábiles
-                          </span>
-                        </span>
-                        <span class="font-nota text-sm tabular-nums text-tinta-900">
-                          {o.costo === 0 ? 'Gratis' : precio(o.costo)}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <div class="mt-4 rounded-md border border-oro-300 bg-oro-50 p-4">
+                <p class="text-sm font-bold text-oro-900">El envío se cotiza y te lo mandamos</p>
+                <p class="mt-1.5 text-xs leading-relaxed text-oro-800">
+                  La paquetería cobra según el peso y el tamaño del paquete, así que el precio
+                  exacto lo sabemos al despacharlo. Hoy <strong>no te cobramos nada</strong>:
+                  registramos tu pedido, lo pesamos, y te mandamos el total con el enlace para
+                  pagar. Si el envío te parece caro, no pagas y lo cancelamos.
+                </p>
+              </div>
             </div>
           ) : (
             <ul class="mt-5 space-y-2">
@@ -226,10 +228,18 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
 
         <section class="nota-seccion">
           <h2 class="etiqueta text-tinta-400">3 · Pago</h2>
-          <p class="mt-4 text-sm text-tinta-600">
-            Al continuar te llevamos a Stripe para capturar la tarjeta. Aceptamos crédito,
-            débito, Apple&nbsp;Pay y Google&nbsp;Pay.
-          </p>
+          {metodo === 'envio' ? (
+            <p class="mt-4 text-sm leading-relaxed text-tinta-600">
+              Cuando tengamos el costo del envío te llega un correo con el total y un enlace
+              para pagar con tarjeta, Apple&nbsp;Pay o Google&nbsp;Pay. La dirección de entrega
+              te la pedimos ahí.
+            </p>
+          ) : (
+            <p class="mt-4 text-sm text-tinta-600">
+              Al continuar te llevamos a Stripe para capturar la tarjeta. Aceptamos crédito,
+              débito, Apple&nbsp;Pay y Google&nbsp;Pay.
+            </p>
+          )}
         </section>
       </div>
 
@@ -258,22 +268,32 @@ export default function Checkout({ sucursales, emailPrevio = '' }: Props) {
           <div class="guia">
             <dt class="text-tinta-600">Envío</dt>
             <dd class="font-nota tabular-nums text-tinta-900">
-              {metodo === 'pickup' ? 'Recoges' : opcion ? (costoEnvio === 0 ? 'Gratis' : precio(costoEnvio)) : 'Por cotizar'}
+              {metodo === 'pickup' ? 'Recoges' : 'Por cotizar'}
             </dd>
           </div>
           <div class="guia border-t border-tinta-200 pt-3">
-            <dt class="font-bold text-tinta-900">Total</dt>
+            <dt class="font-bold text-tinta-900">{metodo === 'envio' ? 'Mercancía' : 'Total'}</dt>
             <dd class="font-nota text-xl font-bold tabular-nums text-tinta-900">{precio(total)}</dd>
           </div>
         </dl>
 
+        {metodo === 'envio' && (
+          <p class="mt-3 text-xs leading-relaxed text-tinta-500">
+            Más el envío, que te pasamos por correo antes de cobrarte.
+          </p>
+        )}
+
         {error && <p role="alert" class="mt-4 rounded-md bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}
 
         <button type="submit" class="btn-primario mt-5 w-full" disabled={enviando}>
-          {enviando ? 'Abriendo pago seguro…' : `Pagar ${precio(total)}`}
+          {enviando
+            ? metodo === 'envio' ? 'Registrando tu pedido…' : 'Abriendo pago seguro…'
+            : metodo === 'envio' ? 'Solicitar mi pedido' : `Pagar ${precio(total)}`}
         </button>
         <p class="mt-3 text-center font-nota text-[11px] text-tinta-500">
-          Pago procesado por Stripe · Cifrado extremo a extremo
+          {metodo === 'envio'
+            ? 'No se te cobra nada todavía'
+            : 'Pago procesado por Stripe · Cifrado extremo a extremo'}
         </p>
       </aside>
     </form>

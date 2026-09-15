@@ -238,3 +238,117 @@ export function correoPedido(pedido: Pedido, sucursal: Sucursal | null): Omit<Co
     ].join('\n'),
   };
 }
+
+/**
+ * Acuse de la solicitud de envío: el pedido quedó apartado y falta el costo del
+ * envío. No hay nada que pagar todavía, y el correo tiene que dejarlo claro
+ * para que nadie se quede esperando un cobro que no va a llegar solo.
+ */
+export function correoSolicitud(pedido: Pedido): Omit<Correo, 'para'> {
+  const filas = pedido.items
+    .map(
+      (i) => `<tr>
+        <td style="padding:6px 0;font-size:14px;color:#3F3F46">${i.nombre} <span style="color:${GRIS}">×${i.cantidad}</span></td>
+        <td style="padding:6px 0;font-size:14px;text-align:right;white-space:nowrap;color:${TINTA}">${precio(i.precio * i.cantidad)}</td>
+      </tr>`,
+    )
+    .join('');
+
+  const html = envoltura(
+    'Recibimos tu pedido',
+    `<p style="margin:0">Ya lo tenemos apartado. Falta una cosa: <strong>el costo del envío</strong>.</p>
+     <p style="margin:12px 0 0;font-size:14px;color:#3F3F46">
+       Lo cobra la paquetería según el peso y el tamaño de tu paquete, así que lo sabemos
+       cuando lo llevamos a despachar. En cuanto lo tengamos te mandamos el total y el enlace
+       para pagar. <strong>Todavía no se te ha cobrado nada.</strong>
+     </p>
+     <p style="margin:16px 0 0;font-size:13px;color:${GRIS}">Folio <strong style="color:${TINTA}">${pedido.folio}</strong></p>
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;border-top:1px solid #E5E5E8">
+       ${filas}
+       <tr>
+         <td style="padding:10px 0 0;font-size:15px;font-weight:700;border-top:1px solid #E5E5E8;color:${TINTA}">Mercancía</td>
+         <td style="padding:10px 0 0;font-size:15px;font-weight:700;text-align:right;border-top:1px solid #E5E5E8;color:${TINTA}">${precio(pedido.subtotal)}</td>
+       </tr>
+       <tr>
+         <td style="padding:6px 0;font-size:14px;color:#3F3F46">Envío</td>
+         <td style="padding:6px 0;font-size:14px;text-align:right;color:${GRIS}">Por cotizar</td>
+       </tr>
+     </table>
+     <p style="margin:20px 0 0;font-size:13px;color:${GRIS}">
+       Si el envío te parece caro cuando te lo pasemos, no pasa nada: no pagas y cancelamos el pedido.
+     </p>`,
+  );
+
+  const lineas = pedido.items.map((i) => `· ${i.nombre} ×${i.cantidad} — ${precio(i.precio * i.cantidad)}`).join('\n');
+
+  return {
+    asunto: `Recibimos tu pedido ${pedido.folio} · Orta Novedades`,
+    html,
+    texto: [
+      'Ya tenemos tu pedido apartado. Falta el costo del envío.',
+      'Lo cobra la paquetería según el peso y el tamaño, así que lo sabemos al despacharlo.',
+      'En cuanto lo tengamos te mandamos el total y el enlace para pagar.',
+      'Todavía no se te ha cobrado nada.',
+      '',
+      `Folio: ${pedido.folio}`,
+      '',
+      lineas,
+      '',
+      `Mercancía: ${precio(pedido.subtotal)}`,
+      'Envío: por cotizar',
+      '',
+      'Si el envío te parece caro cuando te lo pasemos, no pagas y cancelamos el pedido.',
+    ].join('\n'),
+  };
+}
+
+/**
+ * El envío ya tiene precio: aquí va el total y el enlace de pago.
+ *
+ * Es el único correo del sitio que pide dinero, así que enseña las tres cifras
+ * separadas —mercancía, envío, total— para que nadie tenga que confiar en un
+ * número suelto.
+ */
+export function correoCotizado(pedido: Pedido, urlPago: string): Omit<Correo, 'para'> {
+  const html = envoltura(
+    'Ya tenemos el costo de tu envío',
+    `<p style="margin:0">Tu pedido <strong>${pedido.folio}</strong> está listo para salir. Este es el total:</p>
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px">
+       <tr>
+         <td style="padding:6px 0;font-size:14px;color:#3F3F46">Mercancía</td>
+         <td style="padding:6px 0;font-size:14px;text-align:right;color:${TINTA}">${precio(pedido.subtotal)}</td>
+       </tr>
+       <tr>
+         <td style="padding:6px 0;font-size:14px;color:#3F3F46">Envío</td>
+         <td style="padding:6px 0;font-size:14px;text-align:right;color:${TINTA}">${precio(pedido.envio)}</td>
+       </tr>
+       <tr>
+         <td style="padding:10px 0 0;font-size:16px;font-weight:700;border-top:1px solid #E5E5E8;color:${TINTA}">Total</td>
+         <td style="padding:10px 0 0;font-size:16px;font-weight:700;text-align:right;border-top:1px solid #E5E5E8;color:${TINTA}">${precio(pedido.total)}</td>
+       </tr>
+     </table>
+     ${boton(urlPago, 'Pagar y recibir mi pedido')}
+     <p style="margin:20px 0 0;font-size:13px;color:${GRIS}">
+       Al pagar te pedimos la dirección de entrega. Si ya no lo quieres, ignora este correo:
+       el pedido se cancela solo y no se te cobra nada.
+     </p>`,
+  );
+
+  return {
+    asunto: `Tu pedido ${pedido.folio}: ${precio(pedido.total)} con envío · Orta Novedades`,
+    html,
+    texto: [
+      `Tu pedido ${pedido.folio} está listo para salir.`,
+      '',
+      `Mercancía: ${precio(pedido.subtotal)}`,
+      `Envío: ${precio(pedido.envio)}`,
+      `Total: ${precio(pedido.total)}`,
+      '',
+      'Paga aquí:',
+      urlPago,
+      '',
+      'Al pagar te pedimos la dirección de entrega.',
+      'Si ya no lo quieres, ignora este correo: el pedido se cancela y no se te cobra nada.',
+    ].join('\n'),
+  };
+}

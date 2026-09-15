@@ -1,0 +1,1 @@
+ALTER TABLE `pedidos` ADD `cp_entrega` text;
