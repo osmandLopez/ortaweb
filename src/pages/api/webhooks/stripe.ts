@@ -82,15 +82,26 @@ async function atender(evento: Stripe.Event): Promise<void> {
       break;
     }
 
-    /* La sesión caducó sin pagar, o el pago diferido acabó rechazado. En los dos
-       casos el pedido pendiente ya no va a cobrarse nunca: se cierra para que no
-       se quede colgado en el panel fingiendo que alguien está a punto de pagar.
+    /* La sesión caducó sin pagar, o el pago diferido acabó rechazado. Ese cobro
+       ya no va a completarse, así que hay que sacar al pedido de "pendiente de
+       pago" para que no se quede colgado en el panel fingiendo que alguien está
+       a punto de pagar.
+       Lo que se hace con él depende de la entrega: con envío vuelve a la cola de
+       cotización —el enlace caduca a las 24 h y el cliente puede estar viendo el
+       correo al día siguiente—, y para recoger en tienda se cancela. El detalle,
+       en el comentario de `caducarPedidoPorSesion` en repositorio.ts.
        No hay inventario que liberar, porque no se reservó nada: el stock se
        descuenta al confirmar el cobro, no antes. */
     case 'checkout.session.expired':
     case 'checkout.session.async_payment_failed': {
-      const pedido = await db.cancelarPedidoPorSesion(evento.data.object.id);
-      if (pedido) console.log(`[orta] Pedido ${pedido.folio} cancelado (${evento.type}).`);
+      const pedido = await db.caducarPedidoPorSesion(evento.data.object.id);
+      if (pedido) {
+        console.log(
+          pedido.estado === 'por_cotizar'
+            ? `[orta] Pedido ${pedido.folio}: caducó el enlace (${evento.type}), vuelve a por cotizar para reenviar el cobro.`
+            : `[orta] Pedido ${pedido.folio} cancelado (${evento.type}).`,
+        );
+      }
       break;
     }
 

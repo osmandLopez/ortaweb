@@ -222,11 +222,14 @@ export const memoria: Repositorio = {
     return { pedido: p, primeraVez: true };
   },
 
-  async cancelarPedidoPorSesion(sessionId) {
+  async caducarPedidoPorSesion(sessionId) {
     const p = pedidos.find((x) => x.stripeSessionId === sessionId);
-    // Un pedido ya cobrado no se cancela aunque llegue tarde el aviso.
+    // Un pedido ya cobrado no se toca aunque llegue tarde el aviso.
     if (!p || p.estado !== 'pendiente_pago') return null;
-    p.estado = 'cancelado';
+
+    /* Con envío vuelve a la cola de cotización, para poder reenviar el cobro;
+       para recoger en tienda se cancela. Ver repositorio.ts. */
+    p.estado = p.metodoEntrega === 'envio' ? 'por_cotizar' : 'cancelado';
     return p;
   },
 

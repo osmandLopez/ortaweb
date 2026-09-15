@@ -387,20 +387,27 @@ export const sqlite: Repositorio = {
     });
   },
 
-  async cancelarPedidoPorSesion(sessionId) {
+  async caducarPedidoPorSesion(sessionId) {
     const [f] = await orm.select().from(t.pedidos).where(eq(t.pedidos.stripeSessionId, sessionId)).limit(1);
     if (!f) return null;
 
+    /* Un pedido con envío no se cancela al caducar el enlace: vuelve a la cola
+       de cotización para que el panel pueda reenviarle el cobro. Ver el
+       comentario de este método en repositorio.ts. */
+    const nuevoEstado = f.metodoEntrega === 'envio' ? 'por_cotizar' as const : 'cancelado' as const;
+
     /* Mismo candado que en marcarPagado, y por el mismo motivo: un pedido ya
-       cobrado no se puede cancelar aunque llegue tarde el aviso de caducidad de
-       la sesión. */
+       cobrado no se toca aunque llegue tarde el aviso de caducidad. */
     const r = await orm
       .update(t.pedidos)
-      .set({ estado: 'cancelado' })
+      .set({ estado: nuevoEstado })
       .where(and(eq(t.pedidos.id, f.id), eq(t.pedidos.estado, 'pendiente_pago')));
     if (r.rowsAffected === 0) return null;
 
-    return armarPedido({ ...f, estado: 'cancelado' as const });
+    /* El id de la sesión caducada se conserva a propósito: es lo que hace que
+       una recotización por el mismo importe no le devuelva al cliente el enlace
+       muerto. Ver la clave de idempotencia en api/admin/pedidos/[id]/cotizar. */
+    return armarPedido({ ...f, estado: nuevoEstado });
   },
 
   async registrarEvento(eventoId, tipo) {

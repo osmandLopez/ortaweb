@@ -59,13 +59,25 @@ export interface Repositorio {
   marcarPagado(datos: ConfirmacionPago): Promise<{ pedido: Pedido; primeraVez: boolean } | null>;
 
   /**
-   * Cierra un pedido que se quedó sin pagar: la sesión de Stripe caducó, o el
-   * pago diferido (OXXO, transferencia) acabó rechazado.
+   * Cierra el cobro de un pedido que se quedó sin pagar: la sesión de Stripe
+   * caducó, o el pago diferido (OXXO, transferencia) acabó rechazado.
    *
-   * Solo toca pedidos en `pendiente_pago`; nunca puede cancelar uno cobrado.
-   * Devuelve el pedido si lo cambió, y null si no había nada que cambiar.
+   * Qué pasa con el pedido depende de cómo se entrega, y la diferencia importa:
+   *
+   * - **Con envío, vuelve a `por_cotizar`.** Los enlaces de Stripe caducan a
+   *   las 24 horas y ese es su máximo. Entre la cotización y el pago hay un
+   *   correo y una espera humana —el cliente la ve al día siguiente, o el
+   *   lunes—, así que cancelar al caducar le quitaría el pedido a quien todavía
+   *   quería pagarlo. Volviendo a `por_cotizar`, el panel puede reenviarle el
+   *   cobro con un botón.
+   * - **Para recoger en tienda, se cancela.** Ahí el pago es inmediato: si la
+   *   sesión caducó, la persona se fue del checkout y no va a volver.
+   *
+   * Solo toca pedidos en `pendiente_pago`; nunca uno cobrado. Devuelve el
+   * pedido ya actualizado —su `estado` dice qué se hizo— o null si no había
+   * nada que cambiar.
    */
-  cancelarPedidoPorSesion(sessionId: string): Promise<Pedido | null>;
+  caducarPedidoPorSesion(sessionId: string): Promise<Pedido | null>;
 
   /**
    * Idempotencia de webhooks. Devuelve true la primera vez que se ve un evento

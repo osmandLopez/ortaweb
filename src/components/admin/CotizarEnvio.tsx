@@ -7,6 +7,11 @@ interface Props {
   /** centavos de la mercancía, para poder enseñar el total antes de mandar */
   subtotal: number;
   cpEntrega: string | null;
+  /**
+   * Centavos de una cotización anterior, si el pedido ya pasó por aquí y volvió
+   * porque su enlace de pago caducó. Cero la primera vez.
+   */
+  envioPrevio: number;
 }
 
 type Listo = { url: string; total: number; correoEnviado: boolean };
@@ -19,8 +24,11 @@ type Listo = { url: string; total: number; correoEnviado: boolean };
  * abre el cobro y sale el correo. El enlace se queda a la vista para pegarlo
  * por WhatsApp, que es como muchos clientes van a preferir pagar.
  */
-export default function CotizarEnvio({ pedidoId, folio, subtotal, cpEntrega }: Props) {
-  const [envio, setEnvio] = useState('');
+export default function CotizarEnvio({ pedidoId, folio, subtotal, cpEntrega, envioPrevio }: Props) {
+  /* Reenvío: el importe ya se sabe, así que viene escrito. El dueño solo tiene
+     que pulsar, y si la paquetería le cobró otra cosa lo corrige encima. */
+  const reenvio = envioPrevio > 0;
+  const [envio, setEnvio] = useState(reenvio ? String(envioPrevio / 100) : '');
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
   const [listo, setListo] = useState<Listo | null>(null);
@@ -120,11 +128,23 @@ export default function CotizarEnvio({ pedidoId, folio, subtotal, cpEntrega }: P
 
   return (
     <div class="rounded-md border border-oro-300 bg-oro-50 p-4">
-      <p class="text-sm font-bold text-oro-900">Falta el costo del envío</p>
+      <p class="text-sm font-bold text-oro-900">
+        {reenvio ? 'El enlace de pago caducó' : 'Falta el costo del envío'}
+      </p>
       <p class="mt-1 text-xs leading-relaxed text-oro-800">
-        Lleva el paquete a la paquetería y escribe aquí lo que te cobraron
-        {cpEntrega && <> por mandarlo al <strong>CP {cpEntrega}</strong></>}. El cliente recibe el
-        total y el enlace para pagar.
+        {reenvio ? (
+          <>
+            El cliente no pagó en las 24 horas que vale el enlace de Stripe, así que el pedido
+            volvió aquí en vez de cancelarse. Comprueba el importe y mándaselo otra vez: recibe un
+            correo con un enlace nuevo.
+          </>
+        ) : (
+          <>
+            Lleva el paquete a la paquetería y escribe aquí lo que te cobraron
+            {cpEntrega && <> por mandarlo al <strong>CP {cpEntrega}</strong></>}. El cliente recibe
+            el total y el enlace para pagar.
+          </>
+        )}
       </p>
 
       <div class="mt-3 flex flex-wrap items-end gap-2">
@@ -144,7 +164,9 @@ export default function CotizarEnvio({ pedidoId, folio, subtotal, cpEntrega }: P
         </div>
 
         <button type="button" onClick={cotizar} disabled={ocupado || !valido} class="btn-primario py-2.5">
-          {ocupado ? 'Abriendo el cobro…' : 'Cotizar y mandar el pago'}
+          {ocupado
+            ? 'Abriendo el cobro…'
+            : reenvio ? 'Volver a mandar el cobro' : 'Cotizar y mandar el pago'}
         </button>
       </div>
 
@@ -170,7 +192,8 @@ export default function CotizarEnvio({ pedidoId, folio, subtotal, cpEntrega }: P
         ) : (
           <div>
             <p class="text-xs text-red-800">
-              ¿Cancelar {folio}? Se cierra sin cobrar nada. Úsalo cuando el cliente no acepte el envío.
+              ¿Cancelar {folio}? Se cierra sin cobrar nada. Úsalo cuando el cliente no acepte el
+              envío, o cuando ya no responda.
             </p>
             <div class="mt-2 flex gap-2">
               <button type="button" onClick={cancelar} disabled={ocupado}

@@ -68,11 +68,17 @@ export const POST: APIRoute = async ({ params, request, url }) => {
       folio: pedido.folio,
       usuarioId: pedido.usuarioId,
       origen: sitioUrl() || url.origin,
-      /* Derivada del pedido y del monto: si el dueño pulsa dos veces con el
-         mismo importe, Stripe devuelve la sesión que ya abrió en vez de una
-         segunda. Con un monto distinto sí abre otra, que es lo que se quiere
-         cuando corrige una cifra mal escrita. */
-      claveIdempotencia: `cotiza-${pedido.id}-${centavos}`,
+      /* Derivada del pedido, del monto y de la sesión que se está sustituyendo.
+         Los dos primeros dan la protección contra el doble clic: dos pulsaciones
+         con el mismo importe reciben la sesión que ya se abrió, no una segunda.
+         El tercero es el que evita un fallo bastante peor.
+         Un pedido que vuelve a `por_cotizar` porque su enlace caducó conserva el
+         id de esa sesión muerta. Sin incluirlo aquí, recotizarlo por el mismo
+         importe daría la misma clave, y Stripe devolvería —correctamente— la
+         sesión que ya creó con ella: la caducada. El dueño le habría reenviado
+         al cliente el enlace que no funciona, y el correo diría que todo está
+         bien. Con el id dentro, la clave cambia en cada caducidad. */
+      claveIdempotencia: `cotiza-${pedido.id}-${centavos}-${pedido.stripeSessionId ?? 'primera'}`,
     });
   } catch (e) {
     console.error(`[orta] No se pudo abrir el cobro de ${pedido.folio}:`, (e as Error).message);
