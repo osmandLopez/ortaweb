@@ -84,6 +84,8 @@ export default function ProductForm({ categorias, producto }: Props) {
   const [errorFoto, setErrorFoto] = useState('');
   const [estado, setEstado] = useState<Estado>({ tipo: 'inactivo' });
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
+  const [borrando, setBorrando] = useState(false);
 
   const set = (k: keyof typeof vacio) => (e: Event) => {
     const el = e.target as HTMLInputElement;
@@ -139,6 +141,37 @@ export default function ProductForm({ categorias, producto }: Props) {
 
   const hacerPortada = (i: number) =>
     setImagenes((prev) => [prev[i], ...prev.filter((_, j) => j !== i)]);
+
+  const eliminar = async () => {
+    if (!producto) return;
+    setBorrando(true);
+    setEstado({ tipo: 'inactivo' });
+
+    /* El content-type va aunque no haya cuerpo: sin él, la protección
+       anti-CSRF de Astro exige que `origin` coincida con su `url.origin`, y en
+       Vercel ese origen no es ninguno de los dominios del sitio. Un DELETE
+       pelado se comería un 403. Ver src/pages/api/admin/imagenes.ts. */
+    const res = await fetch(`/api/admin/products/${producto.id}`, {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    }).catch(() => null);
+
+    if (res?.status === 204) {
+      window.location.href = '/admin/productos';
+      return;
+    }
+
+    setBorrando(false);
+    setConfirmandoBorrado(false);
+
+    const { error } = (await res?.json().catch(() => null)) ?? {};
+    setEstado({ tipo: 'error', mensaje: error ?? 'No se pudo eliminar el producto.' });
+
+    /* 409 es "tiene pedidos": el servidor no lo borró, lo ocultó. La casilla
+       tiene que reflejarlo o el siguiente guardado lo volvería a publicar. */
+    if (res?.status === 409) setF((prev) => ({ ...prev, activo: false }));
+  };
 
   const validar = () => {
     const e: Record<string, string> = {};
@@ -374,6 +407,49 @@ export default function ProductForm({ categorias, producto }: Props) {
           )}
           {estado.tipo === 'error' && (
             <p role="alert" class="rounded-md bg-red-50 px-3 py-2.5 text-sm text-red-700">{estado.mensaje}</p>
+          )}
+
+          {/* Eliminar solo existe al editar: en el alta no hay nada que borrar.
+              Va al final y en dos pasos, para que no se pulse de pasada. */}
+          {producto && (
+            <div class="border-t border-tinta-200 pt-3">
+              {!confirmandoBorrado ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmandoBorrado(true)}
+                  disabled={borrando}
+                  class="w-full rounded-md px-3 py-2.5 text-sm font-bold text-red-600 transition-colors hover:bg-red-50"
+                >
+                  Eliminar producto
+                </button>
+              ) : (
+                <div class="rounded-md border border-red-200 bg-red-50 p-3">
+                  <p class="text-sm font-bold text-red-800">¿Eliminar «{producto.nombre}»?</p>
+                  <p class="mt-1.5 text-xs leading-relaxed text-red-700">
+                    Se borra del catálogo para siempre. Si ya aparece en algún pedido no se borra:
+                    solo se oculta de la tienda, para no dejar notas de clientes apuntando a la nada.
+                  </p>
+                  <div class="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={eliminar}
+                      disabled={borrando}
+                      class="flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {borrando ? 'Eliminando…' : 'Sí, eliminar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmandoBorrado(false)}
+                      disabled={borrando}
+                      class="rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-bold text-red-700"
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </aside>
