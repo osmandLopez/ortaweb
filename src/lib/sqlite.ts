@@ -1,9 +1,9 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { and, asc, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import * as t from './schema';
 import { ErrorDeDatos, type FiltroProductos, type Repositorio } from './repositorio';
 import { tokenBaseDeDatos, urlBaseDeDatos } from './entorno';
-import type { Categoria, ItemCarrito, Pedido, Producto, Sucursal } from './types';
+import type { Categoria, ItemCarrito, Pedido, Producto, Sucursal, Suscriptor } from './types';
 
 /*
  * Implementación sobre libSQL: archivo local en desarrollo, Turso en producción.
@@ -314,6 +314,44 @@ export const sqlite: Repositorio = {
       .where(eq(t.pedidos.usuarioId, usuarioId))
       .orderBy(desc(t.pedidos.creadoEn));
     return Promise.all(filas.map((f) => armarPedido(f)));
+  },
+
+  async suscribirAlBoletin(email) {
+    const hoy = ahora();
+    await orm
+      .insert(t.suscriptores)
+      .values({ id: id(), email, token: id().replace(/-/g, ''), creadoEn: hoy })
+      .onConflictDoUpdate({
+        target: t.suscriptores.email,
+        /* Quien ya estaba dentro se queda como estaba. Quien se había dado de
+           baja vuelve con la fecha de hoy: es la de su nuevo consentimiento. */
+        set: {
+          creadoEn: sql`case when ${t.suscriptores.bajaEn} is null then ${t.suscriptores.creadoEn} else ${hoy} end`,
+          bajaEn: null,
+        },
+      });
+  },
+
+  async listarSuscriptores() {
+    return orm
+      .select({
+        id: t.suscriptores.id,
+        email: t.suscriptores.email,
+        token: t.suscriptores.token,
+        creadoEn: t.suscriptores.creadoEn,
+      })
+      .from(t.suscriptores)
+      .where(isNull(t.suscriptores.bajaEn))
+      .orderBy(desc(t.suscriptores.creadoEn)) as Promise<Suscriptor[]>;
+  },
+
+  async darDeBajaDelBoletin(por) {
+    const quien = 'token' in por ? eq(t.suscriptores.token, por.token) : eq(t.suscriptores.id, por.id);
+    const r = await orm
+      .update(t.suscriptores)
+      .set({ bajaEn: ahora() })
+      .where(and(quien, isNull(t.suscriptores.bajaEn)));
+    return r.rowsAffected > 0;
   },
 
   async asignarRol(email, rol) {

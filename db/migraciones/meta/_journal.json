@@ -50,6 +50,13 @@
       "when": 1789583537289,
       "tag": "0006_reembolsos",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789584995471,
+      "tag": "0007_boletin",
+      "breakpoints": true
     }
   ]
 }

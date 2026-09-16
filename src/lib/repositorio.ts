@@ -1,4 +1,4 @@
-import type { Categoria, Direccion, Pedido, Producto, Sucursal } from './types';
+import type { Categoria, Direccion, Pedido, Producto, Sucursal, Suscriptor } from './types';
 
 /**
  * Contrato de datos. Las páginas y las rutas de API solo hablan con esta
@@ -42,6 +42,22 @@ export interface Repositorio {
    * reembolsa desde Stripe, no se cancela aquí.
    */
   cancelarPedido(id: string): Promise<Pedido | null>;
+
+  /**
+   * Apunta un correo en el boletín. Si ya estaba, no pasa nada; si se había
+   * dado de baja, vuelve a quedar dentro con fecha nueva, porque es un
+   * consentimiento nuevo. `email` llega ya validado y en minúsculas.
+   */
+  suscribirAlBoletin(email: string): Promise<void>;
+
+  /** Los suscritos que no se han dado de baja, los más recientes primero. */
+  listarSuscriptores(): Promise<Suscriptor[]>;
+
+  /**
+   * Da de baja por el token del enlace (lo usa la persona) o por id (lo usa el
+   * panel). Devuelve false si no había nadie activo con eso.
+   */
+  darDeBajaDelBoletin(por: { token: string } | { id: string }): Promise<boolean>;
 
   /** Asigna el rol. Se usa desde el script de mantenimiento, no desde la web. */
   asignarRol(email: string, rol: 'admin' | 'cliente'): Promise<boolean>;

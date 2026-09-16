@@ -1,6 +1,7 @@
 ---
 import { db } from '@/lib/db';
 import Logo from './Logo.astro';
+import FormularioBoletin from '@/components/islands/FormularioBoletin';
 
 const sucursales = await db.listarSucursales();
 const anio = new Date().getFullYear();
@@ -42,16 +43,7 @@ const columnas = [
           Regalos, temporada y novedades para la casa. Compra en línea y recoge en
           tienda o recíbelo en casa.
         </p>
-        <form class="mt-7 max-w-sm" action="/api/boletin" method="post">
-          <label for="boletin" class="etiqueta text-tinta-500">Avísame de lo que llega</label>
-          <div class="mt-2 flex gap-2">
-            <input
-              id="boletin" name="email" type="email" required placeholder="tu@correo.mx"
-              class="w-full rounded-md border border-tinta-700 bg-tinta-800 px-3 py-2.5 text-sm text-white placeholder:text-tinta-500 focus:border-cielo-500 focus:outline-none"
-            />
-            <button type="submit" class="btn-primario px-4 py-2.5">Suscribirme</button>
-          </div>
-        </form>
+        <FormularioBoletin client:visible />
       </div>
 
       <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">

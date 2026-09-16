@@ -1,4 +1,5 @@
 import { createAuthClient } from 'better-auth/client';
+import { correoValido } from './correo-valido';
 
 /**
  * Cliente de autenticación para las islas. Habla con /api/auth del mismo origen,
@@ -65,13 +66,7 @@ export function mensajeDeError(error: ErrorDeAuth | null | undefined): string {
 
 export const LARGO_MINIMO_CLAVE = 8;
 
-/* Suficientemente estricta para atrapar erratas de verdad (falta @, falta
-   dominio, espacios) sin pelearse con direcciones válidas raras. */
-const CORREO = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
-
-export function correoValido(email: string): boolean {
-  return CORREO.test(email.trim());
-}
+export { correoValido } from './correo-valido';
 
 /** Devuelve el primer problema del registro, o null si todo está bien. */
 export function errorDeRegistro(datos: {

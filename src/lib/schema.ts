@@ -239,3 +239,22 @@ export const eventosStripe = sqliteTable('eventos_stripe', {
   tipo: text('tipo').notNull(),
   procesadoEn: text('procesado_en').notNull(),
 });
+
+/*
+ * Boletín de novedades. Una baja no borra la fila: se marca con `bajaEn`, y
+ * así queda constancia de que esa persona pidió no recibir más correos.
+ */
+export const suscriptores = sqliteTable(
+  'suscriptores',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    token: text('token').notNull(),
+    creadoEn: text('creado_en').notNull(),
+    bajaEn: text('baja_en'),
+  },
+  (t) => [
+    uniqueIndex('suscriptores_email_idx').on(t.email),
+    uniqueIndex('suscriptores_token_idx').on(t.token),
+  ],
+);

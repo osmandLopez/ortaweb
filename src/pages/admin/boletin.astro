@@ -1,0 +1,39 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import ListaBoletin from '@/components/admin/ListaBoletin';
+import { db } from '@/lib/db';
+
+/*
+ * Quién pidió los correos de novedades.
+ *
+ * El sitio solo junta la lista: no manda las promociones. Para eso se descarga
+ * el CSV y se sube a la herramienta de envío que se elija. Cada fila trae su
+ * enlace de baja, que tiene que ir al final de cada correo porque así lo
+ * promete el aviso de privacidad.
+ */
+const suscriptores = await db.listarSuscriptores();
+---
+
+<AdminLayout titulo="Boletín" activo="/admin/boletin">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="rotulo rotulo-negro text-rotulo-sm text-tinta-900">Boletín</h1>
+      <p class="mt-2 text-sm text-tinta-600">
+        {suscriptores.length} {suscriptores.length === 1 ? 'persona quiere' : 'personas quieren'} recibir novedades
+      </p>
+    </div>
+    {suscriptores.length > 0 && (
+      <a href="/api/admin/boletin/csv" class="btn-tinta" download>Descargar lista (CSV)</a>
+    )}
+  </div>
+
+  <p class="mt-4 max-w-2xl text-sm leading-relaxed text-tinta-500">
+    La tienda junta los correos, pero no manda las promociones. Descarga la lista y súbela a la
+    herramienta con la que vayas a enviarlas. Cada persona trae su <strong>enlace de baja</strong>:
+    ponlo al final de cada correo, porque el aviso de privacidad lo promete.
+  </p>
+
+  <div class="mt-8">
+    <ListaBoletin client:load suscriptores={suscriptores} />
+  </div>
+</AdminLayout>

@@ -1,0 +1,38 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import BajaBoletin from '@/components/islands/BajaBoletin';
+
+/*
+ * A donde lleva el enlace de baja que va al final de cada correo de
+ * novedades. El enlace sale de la lista en CSV del panel (/admin/boletin).
+ */
+const token = Astro.url.searchParams.get('token') ?? '';
+const CORREO_DATOS = 'comercializadora.orta@gmail.com';
+---
+
+<BaseLayout titulo="Darte de baja" fondo="mostrador">
+  <div class="contenedor py-16">
+    <div class="mx-auto max-w-md">
+      <h1 class="rotulo rotulo-negro text-rotulo text-tinta-900">Darte de baja</h1>
+
+      <div class="nota-seccion mt-8 space-y-4">
+        {token ? (
+          <>
+            <p class="text-sm leading-relaxed text-tinta-600">
+              Con este botón dejas de recibir nuestros correos de novedades y promociones. Los
+              correos de tus pedidos te siguen llegando, porque son parte de la compra.
+            </p>
+            <BajaBoletin client:load token={token} />
+          </>
+        ) : (
+          <p role="alert" class="text-sm leading-relaxed text-tinta-600">
+            A este enlace le falta una parte. Ábrelo completo desde el correo, o escríbenos a{' '}
+            <a href={`mailto:${CORREO_DATOS}`} class="text-cielo-600 underline">{CORREO_DATOS}</a> y te
+            damos de baja nosotros.
+          </p>
+        )}
+        <a href="/" class="btn-linea w-full">Ir a la tienda</a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
