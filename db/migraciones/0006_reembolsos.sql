@@ -1,0 +1,1 @@
+ALTER TABLE `pedidos` ADD `reembolsado` integer DEFAULT 0 NOT NULL;

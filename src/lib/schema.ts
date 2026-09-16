@@ -171,6 +171,7 @@ export const pedidos = sqliteTable(
     envio: integer('envio').notNull().default(0),
     total: integer('total').notNull(),
     pagado: integer('pagado').notNull().default(0),
+    reembolsado: integer('reembolsado').notNull().default(0),
     metodoEntrega: text('metodo_entrega', { enum: ['envio', 'pickup'] }).notNull(),
     sucursalId: text('sucursal_id').references(() => sucursales.id),
     direccionId: text('direccion_id').references(() => direcciones.id),
@@ -181,6 +182,7 @@ export const pedidos = sqliteTable(
       enum: [
         'por_cotizar', 'pendiente_pago', 'pagado',
         'en_preparacion', 'enviado', 'listo_para_recoger', 'entregado', 'cancelado',
+        'reembolsado',
       ],
     }).notNull().default('pendiente_pago'),
     stripeSessionId: text('stripe_session_id'),

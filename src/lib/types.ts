@@ -82,7 +82,13 @@ export type EstadoPedido =
   | 'enviado'
   | 'listo_para_recoger'
   | 'entregado'
-  | 'cancelado';
+  | 'cancelado'
+  /**
+   * Se devolvió todo lo cobrado desde el panel de Stripe. Lo pone el webhook,
+   * no el panel del sitio. Un reembolso parcial no cambia el estado: solo
+   * suma en `reembolsado`.
+   */
+  | 'reembolsado';
 
 export interface Pedido {
   id: string;
@@ -96,6 +102,11 @@ export interface Pedido {
   total: number;
   /** lo que Stripe confirmó cobrado. Un pedido pagado iguala a total */
   pagado: number;
+  /**
+   * Lo devuelto desde Stripe, acumulado. `pagado` no se toca al reembolsar: lo
+   * que entró de verdad es `pagado - reembolsado`.
+   */
+  reembolsado: number;
   metodoEntrega: MetodoEntrega;
   sucursalId: string | null;
   direccion: Direccion | null;

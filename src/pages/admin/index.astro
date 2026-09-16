@@ -7,8 +7,9 @@ const productos = await db.listarProductos();
 const pedidos = await db.listarPedidos();
 const categorias = await db.listarCategorias();
 
-const cobrado = pedidos.reduce((n, p) => n + p.pagado, 0);
-const pagados = pedidos.filter((p) => p.estado !== 'pendiente_pago' && p.estado !== 'cancelado');
+// Lo reembolsado desde Stripe ya no cuenta como cobrado.
+const cobrado = pedidos.reduce((n, p) => n + p.pagado - p.reembolsado, 0);
+const pagados = pedidos.filter((p) => p.pagado > 0 && p.estado !== 'reembolsado');
 const pendientes = pedidos.filter((p) => p.estado === 'pendiente_pago');
 const agotados = productos.filter((p) => p.stock === 0);
 const bajos = productos.filter((p) => p.stock > 0 && p.stock <= 5);

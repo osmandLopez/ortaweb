@@ -118,15 +118,28 @@ async function atender(evento: Stripe.Event): Promise<void> {
       break;
     }
 
-    /* Reembolso total o parcial. Se hace desde el panel de Stripe y no cambia el
-       estado del pedido por sí solo: devolver el dinero y cancelar el envío son
-       decisiones distintas, y la segunda la toma la tienda. */
+    /* Reembolso total o parcial, hecho desde el panel de Stripe: el sitio no
+       tiene botón para devolver dinero. Antes solo se anotaba en el log, y el
+       panel seguía enseñando como pagado un pedido ya devuelto. Qué se hace con
+       cada caso, en el comentario de `registrarReembolso` en repositorio.ts. */
     case 'charge.refunded': {
       const cargo = evento.data.object;
-      console.warn(
-        `[orta] Reembolso de ${cargo.amount_refunded} en ${cargo.payment_intent} ` +
-          `(folio ${cargo.metadata?.folio ?? 'desconocido'}). Ajusta el pedido a mano si toca.`,
-      );
+      const resultado = await db.registrarReembolso({
+        paymentIntentId:
+          typeof cargo.payment_intent === 'string' ? cargo.payment_intent : (cargo.payment_intent?.id ?? null),
+        folio: cargo.metadata?.folio || null,
+        monto: cargo.amount_refunded,
+        completo: cargo.refunded,
+      });
+      if (!resultado) {
+        // Un cobro hecho a mano en Stripe, fuera de la tienda: no hay pedido que tocar.
+        console.warn(`[orta] Reembolso de ${cargo.amount_refunded} en ${cargo.payment_intent}: no es de ningún pedido.`);
+      } else {
+        console.log(
+          `[orta] Pedido ${resultado.pedido.folio}: reembolso ${cargo.refunded ? 'total' : 'parcial'} ` +
+            `de ${cargo.amount_refunded}${resultado.inventarioDevuelto ? ', inventario devuelto' : ''}.`,
+        );
+      }
       break;
     }
   }

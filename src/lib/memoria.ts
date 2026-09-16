@@ -233,6 +233,27 @@ export const memoria: Repositorio = {
     return p;
   },
 
+  async registrarReembolso({ paymentIntentId, folio, monto, completo }) {
+    const p = pedidos.find(
+      (x) =>
+        (paymentIntentId !== null && x.stripePaymentIntentId === paymentIntentId) ||
+        (folio !== null && x.folio === folio),
+    );
+    if (!p) return null;
+
+    // Cada aviso trae el acumulado: el mayor es el bueno aunque lleguen en desorden.
+    p.reembolsado = Math.max(p.reembolsado, monto);
+    if (!completo || p.estado === 'reembolsado') return { pedido: p, inventarioDevuelto: false };
+
+    p.estado = 'reembolsado';
+    // Vuelve al inventario lo que se descontó al cobrar.
+    for (const i of p.items) {
+      const prod = productos.find((x) => x.id === i.productoId);
+      if (prod) prod.stock += i.cantidad;
+    }
+    return { pedido: p, inventarioDevuelto: true };
+  },
+
   async registrarEvento(eventoId) {
     if (eventos.has(eventoId)) return false; // Stripe lo está reintentando
     eventos.add(eventoId);

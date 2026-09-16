@@ -80,6 +80,21 @@ export interface Repositorio {
   caducarPedidoPorSesion(sessionId: string): Promise<Pedido | null>;
 
   /**
+   * Apunta en el pedido un reembolso hecho desde el panel de Stripe.
+   *
+   * - **Total:** el pedido pasa a `reembolsado` y lo que llevaba vuelve al
+   *   inventario, porque ese stock se descontó al cobrar. Si alguna pieza
+   *   regresa dañada, se corrige a mano en el producto.
+   * - **Parcial:** solo se guarda el importe. El estado no cambia y el
+   *   inventario tampoco: Stripe dice cuánto dinero volvió, no qué piezas.
+   *
+   * Es idempotente: `monto` es el acumulado del cargo, no el de este
+   * reembolso, y el inventario solo se devuelve la vez que el pedido entra en
+   * `reembolsado`. Devuelve null si el cargo no es de ningún pedido del sitio.
+   */
+  registrarReembolso(datos: Reembolso): Promise<{ pedido: Pedido; inventarioDevuelto: boolean } | null>;
+
+  /**
    * Idempotencia de webhooks. Devuelve true la primera vez que se ve un evento
    * y false si Stripe lo está reintentando, para no cobrar ni descontar dos veces.
    */
@@ -103,6 +118,18 @@ export interface ConfirmacionPago {
   paymentIntentId?: string | null;
   /** Dirección capturada en el checkout. null en pedidos para recoger en tienda. */
   direccion?: Direccion | null;
+}
+
+/** Lo que dice Stripe de un cargo con reembolsos. */
+export interface Reembolso {
+  /** El cobro, tal como se guardó al confirmar el pago. */
+  paymentIntentId: string | null;
+  /** El folio que viaja en los metadatos del cobro: plan B si falta el anterior. */
+  folio: string | null;
+  /** Centavos devueltos hasta ahora en ese cargo, sumando todos los reembolsos. */
+  monto: number;
+  /** true cuando ya se devolvió el cargo entero. */
+  completo: boolean;
 }
 
 export interface CotizacionEnvio {

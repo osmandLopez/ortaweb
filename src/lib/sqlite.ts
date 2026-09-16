@@ -220,6 +220,7 @@ export const sqlite: Repositorio = {
         envio: pedido.envio,
         total: pedido.total,
         pagado: pedido.pagado,
+        reembolsado: pedido.reembolsado,
         metodoEntrega: pedido.metodoEntrega,
         sucursalId: pedido.sucursalId,
         cpEntrega: pedido.cpEntrega,
@@ -410,6 +411,57 @@ export const sqlite: Repositorio = {
     return armarPedido({ ...f, estado: nuevoEstado });
   },
 
+  async registrarReembolso({ paymentIntentId, folio, monto, completo }) {
+    const condiciones = [
+      paymentIntentId ? eq(t.pedidos.stripePaymentIntentId, paymentIntentId) : null,
+      folio ? eq(t.pedidos.folio, folio) : null,
+    ].filter((c) => c !== null);
+    if (condiciones.length === 0) return null;
+    const donde = or(...condiciones);
+
+    return orm.transaction(async (tx) => {
+      const [f] = await tx.select().from(t.pedidos).where(donde).limit(1);
+      if (!f) return null;
+
+      /* Stripe puede entregar los avisos de dos reembolsos en desorden. Como
+         cada uno trae el acumulado, quedarse con el mayor deja siempre el bueno. */
+      const reembolsado = Math.max(f.reembolsado, monto);
+
+      if (!completo) {
+        if (reembolsado !== f.reembolsado) {
+          await tx.update(t.pedidos).set({ reembolsado }).where(eq(t.pedidos.id, f.id));
+        }
+        return { pedido: await armarPedido({ ...f, reembolsado }, tx), inventarioDevuelto: false };
+      }
+
+      /* Mismo candado que en marcarPagado: la condición va dentro del UPDATE,
+         así que si llegan dos avisos del mismo reembolso solo uno devuelve el
+         inventario. */
+      const r = await tx
+        .update(t.pedidos)
+        .set({ estado: 'reembolsado', reembolsado })
+        .where(and(eq(t.pedidos.id, f.id), sql`${t.pedidos.estado} <> 'reembolsado'`));
+
+      if (r.rowsAffected === 0) {
+        const [actual] = await tx.select().from(t.pedidos).where(eq(t.pedidos.id, f.id)).limit(1);
+        return { pedido: await armarPedido(actual ?? f, tx), inventarioDevuelto: false };
+      }
+
+      const items = await tx.select().from(t.pedidoItems).where(eq(t.pedidoItems.pedidoId, f.id));
+      for (const i of items) {
+        await tx
+          .update(t.productos)
+          .set({ stock: sql`${t.productos.stock} + ${i.cantidad}` })
+          .where(eq(t.productos.id, i.productoId));
+      }
+
+      return {
+        pedido: await armarPedido({ ...f, estado: 'reembolsado' as const, reembolsado }, tx),
+        inventarioDevuelto: true,
+      };
+    });
+  },
+
   async registrarEvento(eventoId, tipo) {
     try {
       await orm.insert(t.eventosStripe).values({ id: eventoId, tipo, procesadoEn: ahora() });
@@ -462,6 +514,7 @@ async function armarPedido(f: FilaPedido, ejecutor: Ejecutor = orm): Promise<Ped
     envio: f.envio,
     total: f.total,
     pagado: f.pagado,
+    reembolsado: f.reembolsado,
     metodoEntrega: f.metodoEntrega,
     sucursalId: f.sucursalId,
     cpEntrega: f.cpEntrega,

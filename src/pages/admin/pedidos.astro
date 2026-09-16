@@ -31,6 +31,7 @@ const ETIQUETA_ESTADO: Record<string, string> = {
   listo_para_recoger: 'Listo para recoger',
   entregado: 'Entregado',
   cancelado: 'Cancelado',
+  reembolsado: 'Reembolsado',
 };
 
 const COLOR_ESTADO: Record<string, string> = {
@@ -42,6 +43,7 @@ const COLOR_ESTADO: Record<string, string> = {
   listo_para_recoger: 'bg-cielo-100 text-cielo-800',
   entregado: 'bg-tinta-100 text-tinta-700',
   cancelado: 'bg-tinta-100 text-tinta-500',
+  reembolsado: 'bg-red-50 text-red-700',
 };
 
 const fecha = (iso: string) =>
@@ -55,7 +57,8 @@ const fecha = (iso: string) =>
 
 const porCotizar = pedidos.filter((p) => p.estado === 'por_cotizar').length;
 const porCobrar = pedidos.filter((p) => p.estado === 'pendiente_pago').length;
-const cobrado = pedidos.reduce((n, p) => n + p.pagado, 0);
+// Lo que se quedó de verdad: lo reembolsado desde Stripe ya no cuenta.
+const cobrado = pedidos.reduce((n, p) => n + p.pagado - p.reembolsado, 0);
 ---
 
 <AdminLayout titulo="Pedidos" activo="/admin/pedidos">
@@ -117,6 +120,11 @@ const cobrado = pedidos.reduce((n, p) => n + p.pagado, 0);
                 {p.pagado === 0 && (
                   <p class="font-nota text-[10px] uppercase tracking-[0.12em] text-tinta-400">
                     sin cobrar
+                  </p>
+                )}
+                {p.reembolsado > 0 && (
+                  <p class="font-nota text-[10px] uppercase tracking-[0.12em] text-red-700">
+                    {p.estado === 'reembolsado' ? 'devuelto' : 'reembolso parcial'} {precio(p.reembolsado)}
                   </p>
                 )}
                 {p.stripePaymentIntentId && (
