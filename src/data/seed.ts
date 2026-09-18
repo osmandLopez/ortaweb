@@ -19,7 +19,7 @@ export const sucursales: Sucursal[] = [
     nombre: 'Orta Lomas Modelo',
     direccion: 'Av. Zempoala 7908, Col. Lomas Modelo, Monterrey',
     horario: 'Lun a vie 10:00–18:00 · Sáb 10:00–14:00 · Dom cerrado',
-    cp: '',
+    cp: '64140',
   },
   {
     id: 's-plaza',
