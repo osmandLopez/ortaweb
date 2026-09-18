@@ -1,11 +1,13 @@
 ---
 import type { Categoria } from '@/lib/types';
 
+import { rolDe } from '@/lib/session';
 interface Props {
   categorias: Categoria[];
   activo?: string;
 }
 const { categorias, activo } = Astro.props;
+const rol = rolDe(Astro.locals.usuario);
 
 /* El menú principal está fijado por la marca. Las categorías administrables
    cuelgan de "Tienda" como submenú, para que el panel pueda crecer el catálogo
@@ -94,6 +96,18 @@ const hijasDe = (id: string) => categorias.filter((c) => c.padreId === id && c.a
             </a>
           </li>
         ))}
+        <!-- La cuenta también con todas sus letras: en el teléfono, arriba solo
+             queda el monigote, y el panel es lo que abre el dueño desde el móvil. -->
+        <li class="mt-2 border-t border-tinta-200 pt-3">
+          <a href={rol === 'invitado' ? '/entrar' : '/cuenta'} class="flex items-center gap-2 py-2.5 text-sm font-bold text-tinta-900">
+            {rol === 'invitado' ? 'Entrar o crear cuenta' : 'Mi cuenta'}
+          </a>
+          {rol === 'admin' && (
+            <a href="/admin" class="flex items-center gap-2 py-2.5 text-sm font-bold text-tinta-900">
+              Panel de administración
+            </a>
+          )}
+        </li>
         <li class="mt-2 border-t border-tinta-200 pt-3">
           <p class="etiqueta mb-2 text-tinta-400">Categorías</p>
           <ul class="grid grid-cols-2 gap-y-2">

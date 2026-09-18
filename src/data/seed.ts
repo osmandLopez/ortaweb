@@ -26,7 +26,7 @@ export const sucursales: Sucursal[] = [
     nombre: 'Orta Centro',
     direccion: 'Juan Ignacio Ramón, Plaza Tiktok local 16, Centro, Monterrey',
     horario: 'Lun a sáb 10:00–18:00 · Dom 10:00–15:00',
-    cp: '',
+    cp: '64000',
   },
   {
     id: 's-escobedo',

@@ -53,11 +53,19 @@ const rol = rolDe(usuario);
             Panel
           </a>
         )}
+        <!-- En el teléfono en vertical no cabe la palabra, pero la entrada a la
+             cuenta no puede desaparecer: queda el monigote junto al corazón y al
+             carrito, y el texto vuelve en cuanto hay sitio. -->
         <a
           href={rol === 'invitado' ? '/entrar' : '/cuenta'}
-          class="etiqueta hidden items-center gap-2 px-3 py-2 text-tinta-600 hover:text-tinta-900 sm:inline-flex"
+          class="etiqueta flex items-center gap-2 p-2 text-tinta-600 hover:text-tinta-900 sm:px-3 sm:py-2"
+          aria-label={rol === 'invitado' ? 'Entrar a tu cuenta' : 'Tu cuenta'}
         >
-          {rol === 'invitado' ? 'Entrar' : usuario!.nombre.split(' ')[0]}
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="sm:hidden" aria-hidden="true">
+            <circle cx="10" cy="6.75" r="3.25" stroke="currentColor" stroke-width="1.5" />
+            <path d="M3.75 16.75c0-3.1 2.8-5 6.25-5s6.25 1.9 6.25 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+          <span class="hidden sm:inline">{rol === 'invitado' ? 'Entrar' : usuario!.nombre.split(' ')[0]}</span>
         </a>
         {rol !== 'invitado' && (
           <BotonSalir
