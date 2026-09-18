@@ -73,11 +73,10 @@ const rol = rolDe(usuario);
             class="etiqueta hidden px-3 py-2 text-tinta-400 hover:text-tinta-900 sm:inline-flex"
           />
         )}
-        <a href="/cuenta/deseos" class="p-2 text-tinta-600 hover:text-tinta-900" aria-label="Lista de deseos">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M10 17S3 12.6 3 7.9A3.9 3.9 0 0110 5.6a3.9 3.9 0 017 2.3C17 12.6 10 17 10 17z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
-          </svg>
-        </a>
+        <!-- Aquí iba el corazón de la lista de deseos. Se quitó el 18 de
+             septiembre de 2026: apuntaba a /cuenta/deseos, una página que no
+             existe, y no hay forma de meter nada en esa lista. La tabla
+             lista_deseos sigue en la base, lista para cuando se construya. -->
         <CartButton client:load />
       </div>
     </div>
