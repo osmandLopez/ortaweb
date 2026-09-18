@@ -256,6 +256,9 @@ const mapaDe = (nombre: string, direccion: string) =>
     </ul>
   </section>
 
+  {destacados.length > 0 && (
+  <!-- Con el catalogo vacio esta seccion se esconde entera: un titulo sobre
+       una rejilla sin nada parece un error de la pagina. -->
   <!-- NIVEL 3 · Productos destacados. Reutiliza ProductCard tal cual: ya trae
        imagen, nombre, precio y botón de añadir al carrito. -->
   <section class="border-y border-tinta-200 bg-papel-mostrador">
@@ -272,7 +275,11 @@ const mapaDe = (nombre: string, direccion: string) =>
       </div>
     </div>
   </section>
+  )}
 
+  {temporada.length > 0 && (
+  <!-- Sin nada en temporada, la franja dorada seria un titulo con un hueco
+       debajo. Vuelve sola en cuanto un producto se marque como temporada. -->
   <!-- NIVEL 4 · Temporada: la única franja dorada del sitio. -->
   <section class="bg-oro-500">
     <div class="contenedor py-14">
@@ -299,6 +306,7 @@ const mapaDe = (nombre: string, direccion: string) =>
       </div>
     </div>
   </section>
+  )}
 
   <!-- NIVEL 5 · Sucursales. Solo datos que ya existen en la base: nombre,
        dirección y horario. El enlace al mapa se arma con esa misma dirección. -->
