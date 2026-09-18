@@ -19,7 +19,6 @@ const secciones = [
   { id: 'datos', titulo: 'Qué datos te pedimos' },
   { id: 'tarjeta', titulo: 'Tu tarjeta no pasa por aquí' },
   { id: 'para-que', titulo: 'Para qué los usamos' },
-  { id: 'promociones', titulo: 'Correos de novedades' },
   { id: 'terceros', titulo: 'Con quién los compartimos' },
   { id: 'cookies', titulo: 'Cookies' },
   { id: 'arco', titulo: 'Cómo pedir que los borremos' },
@@ -33,7 +32,7 @@ const secciones = [
   titulo="Aviso de privacidad"
   entradilla="Qué datos tuyos guardamos, para qué los usamos, con quién los compartimos y cómo pedir que los borremos."
   descripcion="Aviso de privacidad de Orta Novedades: datos personales que recabamos, finalidades, transferencias y ejercicio de derechos ARCO."
-  actualizado="3 de septiembre de 2026"
+  actualizado="18 de septiembre de 2026"
   secciones={secciones}
 >
   <SeccionTexto id="responsable" titulo="Quién responde por tus datos">
@@ -89,21 +88,8 @@ const secciones = [
       <li>Mantener tu cuenta y tu historial de compras.</li>
     </ul>
     <p>
-      Y un uso que <strong>no</strong> es necesario para tu compra, y al que puedes negarte sin que
-      pase nada: mandarte correos de novedades y promociones.
-    </p>
-  </SeccionTexto>
-
-  <SeccionTexto id="promociones" titulo="Correos de novedades">
-    <p>
-      Sí mandamos promociones y avisos de temporada por correo. Nunca a quien no se ha suscrito ni
-      ha comprado con nosotros, y nunca más de lo razonable.
-    </p>
-    <p>
-      Si no los quieres, dilo y listo: hay un enlace para darte de baja al final de cada correo, o
-      escríbenos a <a href={`mailto:${CORREO_DATOS}`}>{CORREO_DATOS}</a>. Darte de baja de las
-      promociones no afecta los correos de tus pedidos, que sí seguirás recibiendo porque son parte
-      de la compra.
+      <strong>No te mandamos publicidad.</strong> Los únicos correos que salen de aquí son los de tu
+      pedido y los de tu cuenta.
     </p>
   </SeccionTexto>
 
