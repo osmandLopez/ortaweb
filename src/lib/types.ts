@@ -138,12 +138,3 @@ export interface Direccion {
   telefono: string;
   referencias?: string;
 }
-
-/** Alguien que pidió los correos de novedades desde el pie de la tienda. */
-export interface Suscriptor {
-  id: string;
-  email: string;
-  /** Va en el enlace de baja: quien lo tiene puede darse de baja sin entrar. */
-  token: string;
-  creadoEn: string;
-}

@@ -1,7 +1,6 @@
 ---
 import { db } from '@/lib/db';
 import Logo from './Logo.astro';
-import FormularioBoletin from '@/components/islands/FormularioBoletin';
 
 const sucursales = await db.listarSucursales();
 const anio = new Date().getFullYear();
@@ -43,7 +42,6 @@ const columnas = [
           Regalos, temporada y novedades para la casa. Compra en línea y recoge en
           tienda o recíbelo en casa.
         </p>
-        <FormularioBoletin client:visible />
       </div>
 
       <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">

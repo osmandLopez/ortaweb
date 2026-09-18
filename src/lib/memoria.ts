@@ -1,6 +1,6 @@
 import * as seed from '@/data/seed';
 import { ErrorDeDatos, type FiltroProductos, type Repositorio } from './repositorio';
-import type { Categoria, Pedido, Producto, Sucursal, Suscriptor } from './types';
+import type { Categoria, Pedido, Producto, Sucursal } from './types';
 
 /*
  * Repositorio en memoria: el catálogo de muestra, sin base de datos detrás.
@@ -18,7 +18,6 @@ const productos: Producto[] = seed.productos.map((p) => ({ ...p }));
 const categorias: Categoria[] = seed.categorias.map((c) => ({ ...c }));
 const sucursales: Sucursal[] = seed.sucursales.map((s) => ({ ...s }));
 const pedidos: Pedido[] = [];
-const suscriptores: (Suscriptor & { bajaEn: string | null })[] = [];
 const eventos = new Set<string>();
 
 const id = () => crypto.randomUUID();
@@ -194,31 +193,6 @@ export const memoria: Repositorio = {
     return [...pedidos]
       .filter((p) => p.usuarioId === usuarioId)
       .sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
-  },
-
-  async suscribirAlBoletin(email) {
-    const s = suscriptores.find((x) => x.email === email);
-    if (!s) {
-      suscriptores.push({ id: id(), email, token: id().replace(/-/g, ''), creadoEn: ahora(), bajaEn: null });
-    } else if (s.bajaEn) {
-      // Vuelve con la fecha de hoy: es un consentimiento nuevo.
-      s.creadoEn = ahora();
-      s.bajaEn = null;
-    }
-  },
-
-  async listarSuscriptores() {
-    return suscriptores
-      .filter((s) => !s.bajaEn)
-      .sort((a, b) => b.creadoEn.localeCompare(a.creadoEn))
-      .map(({ bajaEn: _, ...s }) => s);
-  },
-
-  async darDeBajaDelBoletin(por) {
-    const s = suscriptores.find((x) => ('token' in por ? x.token === por.token : x.id === por.id));
-    if (!s || s.bajaEn) return false;
-    s.bajaEn = ahora();
-    return true;
   },
 
   async asignarRol() {
