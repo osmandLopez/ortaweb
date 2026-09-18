@@ -3,7 +3,8 @@ import AdminLayout from '@/layouts/AdminLayout.astro';
 import { db } from '@/lib/db';
 import { precio } from '@/lib/money';
 
-const productos = await db.listarProductos();
+// Con ocultos: desde aquí es desde donde se vuelve a mostrar uno.
+const productos = await db.listarProductos({ incluirOcultos: true });
 const categorias = await db.listarCategorias();
 const nombreCategoria = (id: string) => categorias.find((c) => c.id === id)?.nombre ?? '—';
 ---

@@ -62,7 +62,14 @@ export default function CategoryForm({ categorias }: Props) {
 
   const eliminar = async (c: Categoria) => {
     setError('');
-    const res = await fetch(`/api/admin/categories/${c.id}`, { method: 'DELETE' });
+    /* El content-type va aunque no haya cuerpo: sin él, la protección anti-CSRF
+       de Astro le contesta 403 al DELETE en producción, y en el panel se veía
+       como «No se pudo eliminar». Ver ProductForm.tsx. */
+    const res = await fetch(`/api/admin/categories/${c.id}`, {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    });
     if (!res.ok) {
       const { error: msg } = await res.json().catch(() => ({ error: 'No se pudo eliminar.' }));
       return setError(msg);

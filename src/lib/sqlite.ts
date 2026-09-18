@@ -73,7 +73,7 @@ function aFilaProducto(p: Partial<Producto>) {
 
 export const sqlite: Repositorio = {
   async listarProductos(filtro: FiltroProductos = {}) {
-    const donde = [eq(t.productos.activo, true)];
+    const donde = filtro.incluirOcultos ? [] : [eq(t.productos.activo, true)];
 
     if (filtro.categoriaSlug) {
       /* Una categoría incluye lo de sus subcategorías. El CTE recursivo resuelve

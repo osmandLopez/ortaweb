@@ -38,7 +38,7 @@ function rama(slug: string): string[] {
 
 export const memoria: Repositorio = {
   async listarProductos(filtro: FiltroProductos = {}) {
-    let lista = productos.filter((p) => p.activo);
+    let lista = filtro.incluirOcultos ? [...productos] : productos.filter((p) => p.activo);
 
     if (filtro.categoriaSlug) {
       const ids = rama(filtro.categoriaSlug);

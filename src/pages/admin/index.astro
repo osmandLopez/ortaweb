@@ -3,7 +3,7 @@ import AdminLayout from '@/layouts/AdminLayout.astro';
 import { db } from '@/lib/db';
 import { precio } from '@/lib/money';
 
-const productos = await db.listarProductos();
+const productos = await db.listarProductos({ incluirOcultos: true });
 const pedidos = await db.listarPedidos();
 const categorias = await db.listarCategorias();
 

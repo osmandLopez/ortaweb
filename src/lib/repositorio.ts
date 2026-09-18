@@ -141,6 +141,13 @@ export interface CotizacionEnvio {
 }
 
 export interface FiltroProductos {
+  /**
+   * Incluye los productos ocultos (`activo: false`). Solo el panel lo pide: la
+   * tienda nunca debe enseñarlos. Sin esto, un producto que se oculta
+   * desaparece también de la lista del panel y no hay forma de volver a
+   * mostrarlo.
+   */
+  incluirOcultos?: boolean;
   categoriaSlug?: string;
   temporada?: boolean;
   destacado?: boolean;
